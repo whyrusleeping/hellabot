@@ -23,6 +23,9 @@ add it like so:
 	mybot.AddTrigger(MyTrigger)
 	mybot.Start()
 
+The 'To' field on the message object in triggers will refer to the channel that
+a given message is in, unless it is a server message or a user to user private
+message, In which case it will be the target users name.
 ##Connection Passing
 
 Hellabot is able to restart without dropping its connection to the server

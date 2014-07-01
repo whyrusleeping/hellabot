@@ -21,3 +21,20 @@ var OpPeople = &hbot.Trigger {
 		irc.ChMode(mes.To, mes.From, "+o")
 	},
 }
+
+//This trigger will say the contents of the file "info" when prompted
+var SayInfoMessage = &hbot.Trigger{
+	func (m *hbot.Message) bool {
+		return m.Type == "PRIVMSG" && m.Content == "-info"
+	},
+	func (irc *hbot.IrcCon, mes *hbot.Message) bool {
+		fi,err := os.Open("info")
+		if err != nil {
+			return false
+		}
+		info,_ := ioutil.ReadAll(fi)
+
+		irc.Send("PRIVMSG " + mes.From + " : " + string(info))
+		return false
+	},
+}
