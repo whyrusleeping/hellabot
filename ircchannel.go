@@ -1,4 +1,4 @@
-package main
+package hbot
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 type IrcChannel struct {
 	Name string
 	con *IrcCon
-	counts map[string]int
+	Counts map[string]int
 }
 
 func (c *IrcChannel) TryLoadStats(finame string) bool {
@@ -21,7 +21,7 @@ func (c *IrcChannel) TryLoadStats(finame string) bool {
 
 	dec := json.NewDecoder(fi)
 
-	err = dec.Decode(&c.counts)
+	err = dec.Decode(&c.Counts)
 	if err != nil {
 		fmt.Println(err)
 		return false
@@ -37,7 +37,7 @@ func (c *IrcChannel) SaveStats(finame string) {
 	defer fi.Close()
 
 	enc := json.NewEncoder(fi)
-	enc.Encode(c.counts)
+	enc.Encode(c.Counts)
 }
 
 func (c *IrcChannel) Say(text string) {

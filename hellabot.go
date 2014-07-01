@@ -6,7 +6,6 @@ import (
 	"time"
 	"bufio"
 	"strings"
-	"flag"
 	"bitbucket.org/madmo/sendfd"
 )
 
@@ -38,7 +37,7 @@ func NewIrcConnection(host, nick string) *IrcCon {
 		}
 	}
 
-	irc.incoming = make(chan *Message, 16)
+	irc.Incoming = make(chan *Message, 16)
 	irc.outgoing = make(chan string, 16)
 	irc.Channels = make(map[string]*IrcChannel)
 	irc.nick = nick
@@ -60,7 +59,7 @@ func (irc *IrcCon) handleIncomingMessages() {
 			}
 		}
 		if !consumed {
-			irc.incoming <- mes
+			irc.Incoming <- mes
 		}
 	}
 }
@@ -135,7 +134,7 @@ func (irc *IrcCon) Start() {
 			panic(err)
 		}
 
-		close(irc.incoming)
+		close(irc.Incoming)
 		close(irc.outgoing)
 	}()
 
@@ -159,7 +158,7 @@ func (irc *IrcCon) Send(command string) {
 
 func (irc *IrcCon) Join(ch string) *IrcChannel {
 	irc.Send("JOIN " + ch)
-	ichan := &IrcChannel{Name: ch, con: irc, counts: make(map[string]int)}
+	ichan := &IrcChannel{Name: ch, con: irc, Counts: make(map[string]int)}
 
 	irc.Channels[ch] = ichan
 	ichan.TryLoadStats(ch[1:] + ".stats")

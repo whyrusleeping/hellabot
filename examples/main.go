@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 	"io/ioutil"
+	"flag"
 	"github.com/whyrusleeping/hellabot"
 )
 
 var SayInfoMessage = &hbot.Trigger{
-	func (m *Message) bool {
+	func (m *hbot.Message) bool {
 		return m.Type == "PRIVMSG" && m.Content == "-info"
 	},
 	func (irc *hbot.IrcCon, mes *hbot.Message) bool {
@@ -29,11 +30,11 @@ func main() {
 	ichan := flag.String("chan", "#go-nuts", "channel for bot to join")
 	flag.Parse()
 
-	irc := NewIrcConnection(*serv, *nick)
+	irc := hbot.NewIrcConnection(*serv, *nick)
 
 	//Respond to PING-PONG messages
 	//Necessary to stay logged in
-	irc.AddTrigger(PingPong)
+	irc.AddTrigger(hbot.PingPong)
 
 	//Say a message from a file when prompted
 	irc.AddTrigger(SayInfoMessage)
