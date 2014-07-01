@@ -33,11 +33,13 @@ your bot out of irc.
 ##Why?
 
 What do I need an IRC bot for you ask? Why, I've gone through the trouble of
-compiling a list of fun things for you!
+compiling a list of fun things for you! (Some of these are what hellabot is
+currently being used for)
 
 - AutoOp Bot: ops you when you join the channel
 - Stats counting bot: counts how often people talk in a channel
 - Mock users you dont like by repeating what they say
 - Fire a usb dart launcher on a given command
+- Control an MPD radio stream based on chat commands
 - Award praise to people for guessing a random number
 - And many other 'fun' things!

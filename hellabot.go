@@ -156,6 +156,10 @@ func (irc *IrcCon) Send(command string) {
 	irc.outgoing <- command
 }
 
+func (irc *IrcCon) ChMode(user, channel, mode string) {
+	irc.Send("MODE " + channel + " " + mode + " " + user)
+}
+
 func (irc *IrcCon) Join(ch string) *IrcChannel {
 	irc.Send("JOIN " + ch)
 	ichan := &IrcChannel{Name: ch, con: irc, Counts: make(map[string]int)}
