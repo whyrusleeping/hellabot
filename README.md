@@ -1,11 +1,10 @@
-HellaBot
-========
+#HellaBot
 
 One hella-awesome irc bot. Hellabot is an easily hackable event based irc bot
 framework. To respond to an event, simple create a "Trigger" struct containing
 two functions, one for the condition, and one for the action.
 
-Example Trigger:
+###Example Trigger:
 
 	var MyTrigger = &Trigger{
 		func (mes *Message) bool {
@@ -13,7 +12,8 @@ Example Trigger:
 		},
 		func (irc *IrcCon, mes *Message) bool {
 			irc.Channels[mes.To].Say("whyrusleeping said something")
-		}
+		},
+	}
 
 This trigger makes the bot announce to everyone that i said something
 in whatever channel we are in. To make the bot actually use this,
@@ -23,12 +23,14 @@ add it like so:
 	mybot.AddTrigger(MyTrigger)
 	mybot.Start()
 
+##Connection Passing
 
 Hellabot is able to restart without dropping its connection to the server
 (on linux machines) by passing the tcp connection through a unix domain socket.
 This allows you to update triggers and other addons without actually logging
 your bot out of irc.
 
+##Why?
 
 What do I need an IRC bot for you ask? Why, I've gone through the trouble of
 compiling a list of fun things for you!
