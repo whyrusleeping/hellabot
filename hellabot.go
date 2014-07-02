@@ -42,6 +42,7 @@ func NewIrcConnection(host, nick string) *IrcCon {
 	irc.Channels = make(map[string]*IrcChannel)
 	irc.nick = nick
 
+	irc.AddTrigger(pingPong)
 	return irc
 }
 	//Incoming message gathering routine
@@ -173,6 +174,7 @@ func (irc *IrcCon) AddTrigger(t *Trigger) {
 	irc.tr = append(irc.tr, t)
 }
 
+//A struct used to subscribe and react to events on the Irc Server
 type Trigger struct {
 	//Returns true if this trigger applies to the passed in message
 	Condition func (*Message) bool
@@ -183,7 +185,10 @@ type Trigger struct {
 }
 
 //A trigger to respond to the servers ping pong messages
-var PingPong = &Trigger{
+//If PingPong messages are not responded to, the server assumes the
+//client has timed out and will close the connection.
+//Note: this is automatically added in the IrcCon constructor
+var pingPong = &Trigger{
 	func (m *Message) bool {
 		return m.Type == "PING"
 	},

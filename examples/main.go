@@ -32,10 +32,6 @@ func main() {
 
 	irc := hbot.NewIrcConnection(*serv, *nick)
 
-	//Respond to PING-PONG messages
-	//Necessary to stay logged in
-	irc.AddTrigger(hbot.PingPong)
-
 	//Say a message from a file when prompted
 	irc.AddTrigger(SayInfoMessage)
 

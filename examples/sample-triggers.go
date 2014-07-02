@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/whyrusleeping/hellabot"
+	"os/exec"
 )
 
 //This trigger will op people in the given list who ask by saying "-opme"
@@ -42,7 +43,7 @@ var SayInfoMessage = &hbot.Trigger{
 //This trigger will listen for -toggle, -next and -prev and then 
 //perform the mpc action of the same name to control an mpd server running
 //on localhost
-var mpc = &Trigger{
+var Mpc = &Trigger{
   func (m *Message) bool {
     return m.Type == "PRIVMSG" && (m.Content == "-toggle" || m.Content == "-next" || m.Content == "-prev")
   },
@@ -58,7 +59,9 @@ var mpc = &Trigger{
     }
     cmd := exec.Command("/usr/bin/mpc",mpcCMD)
     err := cmd.Run()
-    fmt.Printf("error: %s", err)
+	if err != nil {
+		fmt.Printf("error: %s\n", err)
+	}
     return true
   },
 }
