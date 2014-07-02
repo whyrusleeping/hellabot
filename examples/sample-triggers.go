@@ -38,3 +38,27 @@ var SayInfoMessage = &hbot.Trigger{
 		return false
 	},
 }
+
+//This trigger will listen for -toggle, -next and -prev and then 
+//perform the mpc action of the same name to control an mpd server running
+//on localhost
+var mpc = &Trigger{
+  func (m *Message) bool {
+    return m.Type == "PRIVMSG" && (m.Content == "-toggle" || m.Content == "-next" || m.Content == "-prev")
+  },
+  func (irc *IrcCon, m *Message) bool {
+    mpcCMD:=""
+    switch m.Content {
+    case "-toggle":
+      mpcCMD = "toggle"
+    case "-next":
+      mpcCMD = "next"
+    case "-prev":
+      mpcCMD = "prev"
+    }
+    cmd := exec.Command("/usr/bin/mpc",mpcCMD)
+    err := cmd.Run()
+    fmt.Printf("error: %s", err)
+    return true
+  },
+}
