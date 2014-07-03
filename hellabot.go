@@ -26,8 +26,6 @@ type IrcCon struct {
 	reconnect bool
 }
 
-var interns *IrcChannel
-
 //Connect to an irc server
 func NewIrcConnection(host, nick string) *IrcCon {
 	irc := new(IrcCon)
