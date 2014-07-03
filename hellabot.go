@@ -19,12 +19,16 @@ type IrcCon struct {
 	//this bots nick
 	nick string
 
+	//the unix domain socket address for reconnects
+	unixastr string
+
 	//Whether or not this is a reconnect instance
 	reconnect bool
 }
 
 var interns *IrcChannel
 
+//Connect to an irc server
 func NewIrcConnection(host, nick string) *IrcCon {
 	irc := new(IrcCon)
 
@@ -41,11 +45,13 @@ func NewIrcConnection(host, nick string) *IrcCon {
 	irc.outgoing = make(chan string, 16)
 	irc.Channels = make(map[string]*IrcChannel)
 	irc.nick = nick
+	irc.unixastr := fmt.Sprintf("@%s/irc", nick)
 
 	irc.AddTrigger(pingPong)
 	return irc
 }
-	//Incoming message gathering routine
+
+//Incoming message gathering routine
 func (irc *IrcCon) handleIncomingMessages() {
 	scan := bufio.NewScanner(irc.con)
 	for scan.Scan() {
@@ -78,7 +84,7 @@ func (irc *IrcCon) handleOutgoingMessages() {
 
 //Attempt to hijack session previously running bot
 func (irc *IrcCon) HijackSession() bool {
-	unaddr,err := net.ResolveUnixAddr("unix", "@hellabot/irc")
+	unaddr,err := net.ResolveUnixAddr("unix", irc.unixastr)
 	if err != nil {
 		panic(err)
 	}
@@ -157,10 +163,14 @@ func (irc *IrcCon) Send(command string) {
 	irc.outgoing <- command
 }
 
+//Used to change users modes in a channel
+//operator = "+o" deop = "-o"
+//ban = "+b"
 func (irc *IrcCon) ChMode(user, channel, mode string) {
 	irc.Send("MODE " + channel + " " + mode + " " + user)
 }
 
+//Join a channel and register its struct in the IrcCons channel map
 func (irc *IrcCon) Join(ch string) *IrcChannel {
 	irc.Send("JOIN " + ch)
 	ichan := &IrcChannel{Name: ch, con: irc, Counts: make(map[string]int)}
@@ -198,6 +208,7 @@ var pingPong = &Trigger{
 	},
 }
 
+//Represents any message coming from the server
 type Message struct {
 	Type string
 	From string
@@ -205,6 +216,7 @@ type Message struct {
 	Content string
 }
 
+//TODO: I dont get all the information I could out of this line
 func ParseMessage(line string) *Message {
 	m := new(Message)
 	parts := strings.Split(line,":")
