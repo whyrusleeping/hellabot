@@ -5,7 +5,6 @@ import (
 	"net"
 	"time"
 	"bufio"
-	"strings"
 	"bitbucket.org/madmo/sendfd"
 )
 
@@ -43,7 +42,7 @@ func NewIrcConnection(host, nick string) *IrcCon {
 	irc.outgoing = make(chan string, 16)
 	irc.Channels = make(map[string]*IrcChannel)
 	irc.nick = nick
-	irc.unixastr := fmt.Sprintf("@%s/irc", nick)
+	irc.unixastr = fmt.Sprintf("@%s/irc", nick)
 
 	irc.AddTrigger(pingPong)
 	return irc
@@ -115,7 +114,7 @@ func (irc *IrcCon) Start() {
 	go irc.handleOutgoingMessages()
 
 	go func() {
-		unaddr,err := net.ResolveUnixAddr("unix", "@hellabot/irc")
+		unaddr,err := net.ResolveUnixAddr("unix", fmt.Sprintf("@%s/irc", irc.nick))
 		if err != nil {
 			panic(err)
 		}
@@ -198,47 +197,10 @@ type Trigger struct {
 //Note: this is automatically added in the IrcCon constructor
 var pingPong = &Trigger{
 	func (m *Message) bool {
-		return m.Type == "PING"
+		return m.Content == "PING"
 	},
 	func (irc *IrcCon, m *Message) bool {
 		irc.Send("PONG :" + m.Content)
 		return true
 	},
-}
-
-//Represents any message coming from the server
-type Message struct {
-	Type string
-	From string
-	To string
-	Content string
-}
-
-//TODO: I dont get all the information I could out of this line
-func ParseMessage(line string) *Message {
-	m := new(Message)
-	parts := strings.Split(line,":")
-	if len(parts) > 2 {
-		m.Content = line[2+len(parts[1]):]
-	}
-
-	if parts[0] == "PING " {
-		m.Type = "PING"
-		m.Content = parts[1]
-		return m
-	}
-
-	header := strings.Split(parts[1], " ")
-	if len(header) < 3 {
-		fmt.Println(line)
-		return nil
-	}
-	m.From = header[0]
-	user := strings.Split(m.From, "!")
-	if len(user) > 0 {
-		m.From = user[0]
-	}
-	m.Type = header[1]
-	m.To = header[2]
-	return m
 }

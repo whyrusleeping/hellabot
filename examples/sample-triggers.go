@@ -3,6 +3,9 @@ package main
 import (
 	"github.com/whyrusleeping/hellabot"
 	"os/exec"
+	"fmt"
+	"os"
+	"io/ioutil"
 )
 
 //This trigger will op people in the given list who ask by saying "-opme"
@@ -20,13 +23,14 @@ var OpPeople = &hbot.Trigger {
 	},
 	func (irc *hbot.IrcCon, mes *hbot.Message) bool {
 		irc.ChMode(mes.To, mes.From, "+o")
+		return false
 	},
 }
 
 //This trigger will say the contents of the file "info" when prompted
 var SayInfoMessage = &hbot.Trigger{
 	func (m *hbot.Message) bool {
-		return m.Type == "PRIVMSG" && m.Content == "-info"
+		return m.Command == "PRIVMSG" && m.Content == "-info"
 	},
 	func (irc *hbot.IrcCon, mes *hbot.Message) bool {
 		fi,err := os.Open("info")
@@ -43,11 +47,11 @@ var SayInfoMessage = &hbot.Trigger{
 //This trigger will listen for -toggle, -next and -prev and then 
 //perform the mpc action of the same name to control an mpd server running
 //on localhost
-var Mpc = &Trigger{
-  func (m *Message) bool {
-    return m.Type == "PRIVMSG" && (m.Content == "-toggle" || m.Content == "-next" || m.Content == "-prev")
+var Mpc = &hbot.Trigger{
+  func (m *hbot.Message) bool {
+    return m.Command == "PRIVMSG" && (m.Content == "-toggle" || m.Content == "-next" || m.Content == "-prev")
   },
-  func (irc *IrcCon, m *Message) bool {
+  func (irc *hbot.IrcCon, m *hbot.Message) bool {
     mpcCMD:=""
     switch m.Content {
     case "-toggle":
