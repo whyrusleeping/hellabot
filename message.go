@@ -4,15 +4,7 @@ import (
 	"strings"
 )
 
-//Represents any message coming from the server
-/*
-type Message struct {
-	Type string
-	From string
-	To string
-	Content string
-}*/
-
+// Message prefix, information about who sent this message
 type Prefix struct {
 	Name string
 	User string
@@ -25,11 +17,15 @@ type Message struct {
 	Command string
 	Params []string
 
-	//
+	// Entity that this message was addressed to (channel or user)
 	To string
+
+	// Nick of the messages sender (equivalent to Prefix.Name)
+	// Outdated, please use .Name
 	From string
 }
 
+// Parse a string of text from the irc server into a Message struct
 func ParseMessage(line string) *Message {
 	// Ignore empty messages.
 	if line = strings.Trim(line, "\x20\r\n\x00"); len(line) < 2 {
@@ -42,7 +38,7 @@ func ParseMessage(line string) *Message {
 	if line[0] == ':' {
 		pref = strings.IndexByte(line, ' ')
 
-		//Require prefix
+		// Require prefix
 		if pref < 2 {
 			return nil
 		}
@@ -63,7 +59,7 @@ func ParseMessage(line string) *Message {
 		return mes
 	}
 
-	//Skip space
+	// Skip space
 	cmd++
 
 	// Find prefix for trailer
@@ -76,12 +72,11 @@ func ParseMessage(line string) *Message {
 	}
 
 	pref += cmd
-
-	//Parse args?
 	if pref > cmd {
 		mes.Params = strings.Split(line[cmd:pref-1], " ")
 	}
 
+	//Everything after the last colon is the message contents
 	mes.Content = line[pref+1:]
 
 	if len(mes.Params) > 0 {
@@ -92,6 +87,8 @@ func ParseMessage(line string) *Message {
 	return mes
 }
 
+// Parse user information from string
+// format: nick!user@hostname
 func ParsePrefix(prefix string) *Prefix {
 	p := new(Prefix)
 

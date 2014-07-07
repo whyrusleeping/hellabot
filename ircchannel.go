@@ -12,6 +12,7 @@ type IrcChannel struct {
 	Counts map[string]int
 }
 
+// Attempt to load chat frequency stats from a file
 func (c *IrcChannel) TryLoadStats(finame string) bool {
 	fi,err := os.Open(finame)
 	if err != nil {
@@ -29,6 +30,7 @@ func (c *IrcChannel) TryLoadStats(finame string) bool {
 	return true
 }
 
+// Write chat frequencies to a file
 func (c *IrcChannel) SaveStats(finame string) {
 	fi,err := os.Create(finame)
 	if err != nil {
@@ -40,6 +42,7 @@ func (c *IrcChannel) SaveStats(finame string) {
 	enc.Encode(c.Counts)
 }
 
+// Send a message to this irc channel
 func (c *IrcChannel) Say(text string) {
 	_,err := fmt.Fprintf(c.con.con, "PRIVMSG %s :%s\r\n", c.Name, text)
 	if err != nil {
