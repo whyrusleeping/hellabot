@@ -34,6 +34,12 @@ type IrcCon struct {
 func NewIrcConnection(host, nick string) *IrcCon {
 	irc := new(IrcCon)
 
+	irc.Incoming = make(chan *Message, 16)
+	irc.outgoing = make(chan string, 16)
+	irc.Channels = make(map[string]*IrcChannel)
+	irc.nick = nick
+	irc.unixastr = fmt.Sprintf("@%s/irc", nick)
+
 	// Attempt reconnection
 	if !irc.HijackSession() {
 		var err error
@@ -42,12 +48,6 @@ func NewIrcConnection(host, nick string) *IrcCon {
 			panic(err)
 		}
 	}
-
-	irc.Incoming = make(chan *Message, 16)
-	irc.outgoing = make(chan string, 16)
-	irc.Channels = make(map[string]*IrcChannel)
-	irc.nick = nick
-	irc.unixastr = fmt.Sprintf("@%s/irc", nick)
 
 	irc.AddTrigger(pingPong)
 	return irc

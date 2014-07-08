@@ -44,6 +44,7 @@ all messages and make sure it is the last trigger added.
 		},
 	}
 
+	mybot.AddTrigger(EatEverything)
 
 ### Connection Passing
 

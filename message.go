@@ -2,6 +2,7 @@ package hbot
 
 import (
 	"strings"
+	"time"
 )
 
 // Message prefix, information about who sent this message
@@ -16,6 +17,8 @@ type Message struct {
 	Content string
 	Command string
 	Params []string
+
+	TimeStamp time.Time
 
 	// Entity that this message was addressed to (channel or user)
 	To string
@@ -82,7 +85,10 @@ func ParseMessage(line string) *Message {
 	if len(mes.Params) > 0 {
 		mes.To = mes.Params[0]
 	}
-	mes.From = mes.Prefix.Name
+	if mes.Prefix != nil {
+		mes.From = mes.Prefix.Name
+	}
+	mes.TimeStamp = time.Now()
 
 	return mes
 }
