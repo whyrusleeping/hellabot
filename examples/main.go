@@ -1,3 +1,4 @@
+// This is an example program showing the usage of hellabot
 package main
 
 import (
@@ -14,22 +15,23 @@ func main() {
 
 	irc := hbot.NewIrcConnection(*serv, *nick)
 
-	//Say a message from a file when prompted
+	// Say a message from a file when prompted
 	irc.AddTrigger(SayInfoMessage)
 
-	//Start up bot
+	// Start up bot
 	irc.Start()
 
-	//join a channel
+	// Join a channel
 	mychannel := irc.Join(*ichan)
 	mychannel.Say("Hey")
 
+	// Read off messages from the server
 	for mes := range irc.Incoming {
 		if mes == nil {
 			fmt.Println("Disconnected.")
 			return
 		}
-		//print out raw message struct
+		// Log raw message struct
 		fmt.Println(mes)
 	}
 	fmt.Println("Bot shutting down.")

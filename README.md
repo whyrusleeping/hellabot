@@ -46,6 +46,12 @@ all messages and make sure it is the last trigger added.
 
 	mybot.AddTrigger(EatEverything)
 
+Alternatively:
+
+	for mes := range mybot.Incoming {
+		log.Println(mes)
+	}
+
 ### Connection Passing
 
 Hellabot is able to restart without dropping its connection to the server
@@ -68,4 +74,5 @@ currently being used for)
 - Fire a usb dart launcher on a given command
 - Control an MPD radio stream based on chat commands
 - Award praise to people for guessing a random number
+- Scrape news sites for relevant articles and send them to a channel
 - And many other 'fun' things!

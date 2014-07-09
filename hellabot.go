@@ -119,7 +119,7 @@ func (irc *IrcCon) Start() {
 	go irc.handleOutgoingMessages()
 
 	go func() {
-		unaddr,err := net.ResolveUnixAddr("unix", fmt.Sprintf("@%s/irc", irc.nick))
+		unaddr,err := net.ResolveUnixAddr("unix", irc.unixastr)
 		if err != nil {
 			panic(err)
 		}
@@ -202,7 +202,7 @@ type Trigger struct {
 // Note: this is automatically added in the IrcCon constructor
 var pingPong = &Trigger{
 	func (m *Message) bool {
-		return m.Content == "PING"
+		return m.Command == "PING"
 	},
 	func (irc *IrcCon, m *Message) bool {
 		irc.Send("PONG :" + m.Content)
