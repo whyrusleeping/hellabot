@@ -77,3 +77,7 @@ currently being used for)
 - Award praise to people for guessing a random number
 - Scrape news sites for relevant articles and send them to a channel
 - And many other 'fun' things!
+
+### Credits
+
+[sorcix](http://github.com/sorcix) for his Message Parsing code

@@ -29,6 +29,8 @@ type Message struct {
 }
 
 // Parse a string of text from the irc server into a Message struct
+// Taken from: https://github.com/sorcix/irc
+// All credit for this function goes to github user sorcix
 func ParseMessage(line string) *Message {
 	// Ignore empty messages.
 	if line = strings.Trim(line, "\x20\r\n\x00"); len(line) < 2 {
@@ -95,6 +97,8 @@ func ParseMessage(line string) *Message {
 
 // Parse user information from string
 // format: nick!user@hostname
+// Taken from: https://github.com/sorcix/irc
+// All credit for this function goes to github user sorcix
 func ParsePrefix(prefix string) *Prefix {
 	p := new(Prefix)
 
