@@ -15,6 +15,8 @@ type IrcCon struct {
 	// Map of irc channels this bot is joined to
 	Channels map[string]*IrcChannel
 
+	//Server password (optional) only used if set
+	Password string
 
 	con net.Conn
 	outgoing chan string
@@ -22,6 +24,7 @@ type IrcCon struct {
 
 	// This bots nick
 	nick string
+
 
 	// Unix domain socket address for reconnects
 	unixastr string
@@ -150,6 +153,9 @@ func (irc *IrcCon) Start() {
 	// Only register on an initial connection
 	if !irc.reconnect {
 		//Server registration
+		if irc.Password != "" {
+			irc.Send("PASS " + irc.Password)
+		}
 		irc.Send(fmt.Sprintf("USER %s 8 * :%s", irc.nick, irc.nick))
 		irc.Send(fmt.Sprintf("NICK %s", irc.nick))
 	}

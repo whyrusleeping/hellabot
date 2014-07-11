@@ -39,7 +39,7 @@ func ParseMessage(line string) *Message {
 
 	mes := new(Message)
 
-	pref := 0
+	var pref int
 	if line[0] == ':' {
 		pref = strings.IndexByte(line, ' ')
 
@@ -81,7 +81,7 @@ func ParseMessage(line string) *Message {
 		mes.Params = strings.Split(line[cmd:pref-1], " ")
 	}
 
-	//Everything after the last colon is the message contents
+	// Everything after the last colon is the message contents
 	mes.Content = line[pref+1:]
 
 	if len(mes.Params) > 0 {
