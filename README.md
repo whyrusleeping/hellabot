@@ -29,6 +29,8 @@ The 'To' field on the message object in triggers will refer to the channel that
 a given message is in, unless it is a server message or a user to user private
 message, In which case it will be the target users name.
 
+For more example triggers, check the examples directory.
+
 ### General Usage
 All incoming messages not consumed by a trigger are placed into the IrcCon's
 Incoming channel. If not removed, they will fill up the channel and cause the
@@ -53,6 +55,46 @@ Alternatively:
 		log.Println(mes)
 	}
 
+### The Message struct
+
+	type Message struct {
+		// The message prefix contains information about who sent the message
+		*Prefix
+
+		// Content generally refers to the text of a PRIVMSG
+		Content string
+
+		// Message command, ie PRIVMSG, MODE, JOIN, NICK, etc
+		Command string
+
+		// Command parameters
+		// For example, which mode for MODE commands
+		Params []string
+
+		//Time at which this message was recieved
+		TimeStamp time.Time
+
+		// Entity that this message was addressed to (channel or user)
+		To string
+
+		// Nick of the messages sender (equivalent to Prefix.Name)
+		// Outdated, please use .Name
+		From string
+	}
+
+	type Prefix struct {
+		// The senders nick
+		Name string
+
+		// The senders username
+		User string
+
+		// The senders hostname
+		Host string
+	}
+
+
+
 ### Connection Passing
 
 Hellabot is able to restart without dropping its connection to the server
@@ -65,7 +107,7 @@ over.
 
 ### Why?
 
-What do I need an IRC bot for you ask? Why, I've gone through the trouble of
+What do you need an IRC bot for you ask? Why, I've gone through the trouble of
 compiling a list of fun things for you! (Some of these are what hellabot is
 currently being used for)
 

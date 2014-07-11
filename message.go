@@ -5,19 +5,21 @@ import (
 	"time"
 )
 
-// Message prefix, information about who sent this message
-type Prefix struct {
-	Name string
-	User string
-	Host string
-}
-
 type Message struct {
+	// The message prefix contains information about who sent the message
 	*Prefix
+
+	// Content generally refers to the text of a PRIVMSG
 	Content string
+
+	// Message command, ie PRIVMSG, MODE, JOIN, NICK, etc
 	Command string
+
+	// Command parameters
+	// For example, which mode for MODE commands
 	Params []string
 
+	//Time at which this message was recieved
 	TimeStamp time.Time
 
 	// Entity that this message was addressed to (channel or user)
@@ -27,6 +29,18 @@ type Message struct {
 	// Outdated, please use .Name
 	From string
 }
+
+type Prefix struct {
+	// The senders nick
+	Name string
+
+	// The senders username
+	User string
+
+	// The senders hostname
+	Host string
+}
+
 
 // Parse a string of text from the irc server into a Message struct
 // Taken from: https://github.com/sorcix/irc
