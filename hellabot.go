@@ -5,7 +5,6 @@ import (
 	"net"
 	"time"
 	"bufio"
-	"bitbucket.org/madmo/sendfd"
 )
 
 type IrcCon struct {
@@ -26,7 +25,7 @@ type IrcCon struct {
 	nick string
 
 
-	// Unix domain socket address for reconnects
+	// Unix domain socket address for reconnects (linux only)
 	unixastr string
 
 	// Whether or not this is a reconnect instance
@@ -87,68 +86,12 @@ func (irc *IrcCon) handleOutgoingMessages() {
 	}
 }
 
-// Attempt to hijack session previously running bot
-func (irc *IrcCon) HijackSession() bool {
-	unaddr,err := net.ResolveUnixAddr("unix", irc.unixastr)
-	if err != nil {
-		panic(err)
-	}
-
-	con,err := net.DialUnix("unix", nil, unaddr)
-	if err != nil {
-		fmt.Println("Couldnt restablish connection, no prior bot.")
-		fmt.Println(err)
-		return false
-	}
-
-	ncon,err := sendfd.RecvFD(con)
-	if err != nil {
-		panic(err)
-	}
-
-	netcon,err := net.FileConn(ncon)
-	if err != nil {
-		panic(err)
-	}
-
-	irc.reconnect = true
-	irc.con = netcon
-	return true
-}
-
 // Start up servers various running methods
 func (irc *IrcCon) Start() {
 	go irc.handleIncomingMessages()
 	go irc.handleOutgoingMessages()
 
-	go func() {
-		unaddr,err := net.ResolveUnixAddr("unix", irc.unixastr)
-		if err != nil {
-			panic(err)
-		}
-		list,err := net.ListenUnix("unix", unaddr)
-		if err != nil {
-			panic(err)
-		}
-		con,err := list.AcceptUnix()
-		if err != nil {
-			panic(err)
-		}
-		list.Close()
-
-		fi,err := irc.con.(*net.TCPConn).File()
-		if err != nil {
-			panic(err)
-		}
-
-		err = sendfd.SendFD(con,fi)
-		if err != nil {
-			panic(err)
-		}
-
-		close(irc.Incoming)
-		close(irc.outgoing)
-	}()
+	go irc.StartUnixListener()
 
 	// Only register on an initial connection
 	if !irc.reconnect {
