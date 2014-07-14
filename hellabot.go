@@ -6,9 +6,6 @@ import (
 	"time"
 	"bufio"
 	"crypto/tls"
-
-	"io"
-	"os"
 )
 
 type IrcCon struct {
@@ -73,7 +70,6 @@ func (irc *IrcCon) Connect(host string) (err error) {
 
 // Incoming message gathering routine
 func (irc *IrcCon) handleIncomingMessages() {
-	io.Copy(os.Stdout, irc.con)
 	scan := bufio.NewScanner(irc.con)
 	for scan.Scan() {
 		mes := ParseMessage(scan.Text())
