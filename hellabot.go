@@ -5,8 +5,14 @@ import (
 	"net"
 	"time"
 	"bufio"
+
 	"crypto/tls"
+	"crypto/md5"
+	"encoding/base64"
 )
+
+// Verbosity of server logging
+var Verbosity int
 
 type IrcCon struct {
 	// Channel for user to read incoming messages
@@ -21,13 +27,15 @@ type IrcCon struct {
 	// SSL
 	UseSSL bool
 
+	// Do SASL authentication
+	DoSasl bool
+
 	con net.Conn
 	outgoing chan string
 	tr []*Trigger
 
 	// This bots nick
 	nick string
-
 
 	// Unix domain socket address for reconnects (linux only)
 	unixastr string
@@ -60,6 +68,7 @@ func NewIrcConnection(host, nick string, ssl bool) (*IrcCon, error) {
 }
 
 func (irc *IrcCon) Connect(host string) (err error) {
+	irc.Log(3, "Connect")
 	if irc.UseSSL {
 		irc.con,err = tls.Dial("tcp", host, &tls.Config{})
 	} else {
@@ -91,6 +100,7 @@ func (irc *IrcCon) handleIncomingMessages() {
 // Handles message speed throtling
 func (irc *IrcCon) handleOutgoingMessages() {
 	for s := range irc.outgoing {
+		irc.Log(4, "Sending: '%s'", s)
 		_,err := fmt.Fprint(irc.con, s + "\r\n")
 		if err != nil {
 			panic(err)
@@ -99,8 +109,49 @@ func (irc *IrcCon) handleOutgoingMessages() {
 	}
 }
 
+func (irc *IrcCon) Log(level int, format string, args ...interface{}) {
+	if Verbosity >= level {
+		fmt.Printf(format + "\n", args...)
+	}
+}
+// Perform SASL authentication
+// ref: https://github.com/atheme/charybdis/blob/master/doc/sasl.txt
+func (irc *IrcCon) Authenticate(user, pass string) {
+	irc.Log(3, "Beginning SASL Authentication")
+	irc.Send("CAP REQ :sasl")
+	irc.sendUserCommand(irc.nick, irc.nick, "8")
+	irc.SetNick(irc.nick)
+	irc.Send("AUTHENTICATE PLAIN")
+
+	// TODO: Verify that this is the proper way
+	hash := md5.Sum([]byte(pass))
+	passtext := base64.StdEncoding.EncodeToString(hash[:])
+	irc.Send("AUTHENTICATE " + passtext)
+	irc.Send("CAP END")
+}
+
+// A basic set of registration commands
+func (irc *IrcCon) StandardRegistration() {
+	//Server registration
+	if irc.Password != "" {
+		irc.Send("PASS " + irc.Password)
+	}
+	irc.sendUserCommand(irc.nick, irc.nick, "8")
+	irc.SetNick(irc.nick)
+}
+
+// Set username, real name, and mode
+func (irc *IrcCon) sendUserCommand(user, realname, mode string) {
+	irc.Send(fmt.Sprintf("USER %s %s * :%s", user, mode, realname))
+}
+
+func (irc *IrcCon) SetNick(nick string) {
+	irc.Send(fmt.Sprintf("NICK %s", nick))
+}
+
 // Start up servers various running methods
 func (irc *IrcCon) Start() {
+	irc.Log(3, "Start bot processes.")
 	go irc.handleIncomingMessages()
 	go irc.handleOutgoingMessages()
 
@@ -108,12 +159,11 @@ func (irc *IrcCon) Start() {
 
 	// Only register on an initial connection
 	if !irc.reconnect {
-		//Server registration
-		if irc.Password != "" {
-			irc.Send("PASS " + irc.Password)
+		if irc.DoSasl {
+			irc.Authenticate(irc.nick, irc.Password)
+		} else {
+			irc.StandardRegistration()
 		}
-		irc.Send(fmt.Sprintf("USER %s 8 * :%s", irc.nick, irc.nick))
-		irc.Send(fmt.Sprintf("NICK %s", irc.nick))
 	}
 }
 
