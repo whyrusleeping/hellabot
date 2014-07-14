@@ -5,6 +5,10 @@ import (
 	"net"
 	"time"
 	"bufio"
+	"crypto/tls"
+
+	"io"
+	"os"
 )
 
 type IrcCon struct {
@@ -16,6 +20,9 @@ type IrcCon struct {
 
 	//Server password (optional) only used if set
 	Password string
+
+	// SSL
+	UseSSL bool
 
 	con net.Conn
 	outgoing chan string
@@ -33,7 +40,7 @@ type IrcCon struct {
 }
 
 // Connect to an irc server
-func NewIrcConnection(host, nick string) *IrcCon {
+func NewIrcConnection(host, nick string, ssl bool) (*IrcCon, error) {
 	irc := new(IrcCon)
 
 	irc.Incoming = make(chan *Message, 16)
@@ -41,22 +48,32 @@ func NewIrcConnection(host, nick string) *IrcCon {
 	irc.Channels = make(map[string]*IrcChannel)
 	irc.nick = nick
 	irc.unixastr = fmt.Sprintf("@%s/irc", nick)
+	irc.UseSSL = ssl
 
 	// Attempt reconnection
 	if !irc.HijackSession() {
-		var err error
-		irc.con,err = net.Dial("tcp", host)
+		err := irc.Connect(host)
 		if err != nil {
-			panic(err)
+			return nil,err
 		}
 	}
 
 	irc.AddTrigger(pingPong)
-	return irc
+	return irc, nil
+}
+
+func (irc *IrcCon) Connect(host string) (err error) {
+	if irc.UseSSL {
+		irc.con,err = tls.Dial("tcp", host, &tls.Config{})
+	} else {
+		irc.con,err = net.Dial("tcp", host)
+	}
+	return
 }
 
 // Incoming message gathering routine
 func (irc *IrcCon) handleIncomingMessages() {
+	io.Copy(os.Stdout, irc.con)
 	scan := bufio.NewScanner(irc.con)
 	for scan.Scan() {
 		mes := ParseMessage(scan.Text())
