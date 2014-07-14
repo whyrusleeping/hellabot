@@ -21,7 +21,7 @@ This trigger makes the bot announce to everyone that I said something
 in whatever channel we are in. To make the bot actually use this,
 add it like so:
 
-	mybot := NewIrcConnection("irc.freenode.com:6667","hellabot")
+	mybot := NewIrcConnection("irc.freenode.net:6667","hellabot",false)
 	mybot.AddTrigger(MyTrigger)
 	mybot.Start()
 
@@ -56,6 +56,9 @@ Alternatively:
 	}
 
 ### The Message struct
+
+The message struct is the primary struct you will be dealing with when building
+triggers or reading off the Incoming channel.
 
 	type Message struct {
 		// The message prefix contains information about who sent the message
@@ -104,6 +107,27 @@ your bot out of irc. To do this, simply run the program again with the same nick
 and without killing the first program (different nicks wont reuse the same bot
 instance), the first program will shutdown cleanly and the new one will take
 over.
+
+### Security
+
+Hellabot supports both SSL and SASL for secure connections to whichever server
+you like. To enable SSL simple pass 'true' as the third argument to the
+NewIrcConnection function.
+
+	mysslcon := NewIrcConnection("irc.freenode.net:6667","hellabot",true)
+
+To use SASL to authenticate with the server:
+
+	mysslcon.DoSasl = true
+	mysslcon.Password = "MyPassword"
+	mysslcon.Start()
+
+Note: SASL does not require SSL.
+
+### Passwords
+
+For servers that require passwords in the initial registration, simple set
+the Password field of the IrcCon struct before calling Start on it.
 
 ### Why?
 
