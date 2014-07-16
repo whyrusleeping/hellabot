@@ -13,7 +13,10 @@ func main() {
 	ichan := flag.String("chan", "#go-nuts", "channel for bot to join")
 	flag.Parse()
 
-	irc := hbot.NewIrcConnection(*serv, *nick)
+	irc,err := hbot.NewIrcConnection(*serv, *nick, false)
+	if err != nil {
+		panic(err)
+	}
 
 	// Say a message from a file when prompted
 	irc.AddTrigger(SayInfoMessage)

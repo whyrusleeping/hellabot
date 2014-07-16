@@ -90,6 +90,6 @@ var LogChatFreqs = &hbot.Trigger{
 		irc.Channels[mes.To].SaveStats(mes.To[1:]+".stats")
 		return false
 	},
-})
+}
 
 
