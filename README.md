@@ -104,10 +104,11 @@ triggers or reading off the Incoming channel.
 Hellabot is able to restart without dropping its connection to the server
 (on linux machines) by passing the tcp connection through a unix domain socket.
 This allows you to update triggers and other addons without actually logging
-your bot out of irc. To do this, simply run the program again with the same nick 
-and without killing the first program (different nicks wont reuse the same bot
-instance), the first program will shutdown cleanly and the new one will take
-over.
+your bot out of irc, avoiding the loss of op status and spamming the channel
+with constant join/part messages. To do this, simply run the program again with
+the same nick and without killing the first program (different nicks wont reuse
+the same bot instance), the first program will shutdown cleanly and the new one
+will take over.
 
 ### Security
 
@@ -115,7 +116,8 @@ Hellabot supports both SSL and SASL for secure connections to whichever server
 you like. To enable SSL simple pass 'true' as the third argument to the
 NewIrcConnection function.
 
-	mysslcon := NewIrcConnection("irc.freenode.net:6667","hellabot",true)
+	mysslcon,err := NewIrcConnection("irc.freenode.net:6667","hellabot",true)
+	// Handle err if you like
 
 To use SASL to authenticate with the server:
 
@@ -127,14 +129,29 @@ Note: SASL does not require SSL.
 
 ### Passwords
 
-For servers that require passwords in the initial registration, simple set
-the Password field of the IrcCon struct before calling Start on it.
+For servers that require passwords in the initial registration, simply set
+the Password field of the IrcCon struct before calling its Start method.
 
 ### Debugging
 
 The hbot package has a global variable called Verbosity, it controls
-hellabots internal logging levels. Currently it is unfinished, but setting it to 5
-will enable all current logs, including incoming and outgoing messages.
+hellabots internal logging levels. There are six levels of logging at the time
+of writing, not all are currently used.
+
+	// For error conditions
+	LError 
+	LWarning
+
+	// For tracing code paths
+	LTrace
+
+	// For providing extra info about hellabots state
+	LInfo
+	LNotice
+
+	// For logging every little detail that happens
+	LNoise
+
 
 ### Why?
 
@@ -150,6 +167,11 @@ currently being used for)
 - Award praise to people for guessing a random number
 - Scrape news sites for relevant articles and send them to a channel
 - And many other 'fun' things!
+
+### References
+
+[Client Protocol, RFC 2812](http://tools.ietf.org/html/rfc2812)
+[SASL Authentication Documentation](https://tools.ietf.org/html/draft-mitchell-irc-capabilities-01)
 
 ### Credits
 
