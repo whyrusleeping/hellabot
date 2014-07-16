@@ -83,6 +83,9 @@ func (irc *IrcCon) handleIncomingMessages() {
 	for scan.Scan() {
 		mes := ParseMessage(scan.Text())
 		consumed := false
+		if c,ok := irc.Channels[mes.To]; ok {
+			c.istream <- mes
+		}
 		for _,t := range irc.tr {
 			if t.Condition(mes) {
 				consumed = t.Action(irc,mes)
@@ -187,7 +190,13 @@ func (irc *IrcCon) ChMode(user, channel, mode string) {
 // Join a channel and register its struct in the IrcCons channel map
 func (irc *IrcCon) Join(ch string) *IrcChannel {
 	irc.Send("JOIN " + ch)
-	ichan := &IrcChannel{Name: ch, con: irc, Counts: make(map[string]int)}
+	ichan := &IrcChannel{
+		Name: ch,
+		con: irc,
+		Counts: make(map[string]int),
+		istream: make(chan *Message),
+	}
+	go ichan.handleMessages()
 
 	irc.Channels[ch] = ichan
 	ichan.TryLoadStats(ch[1:] + ".stats")

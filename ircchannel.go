@@ -6,21 +6,28 @@ import (
 	"fmt"
 )
 
-//Permission Flags
+//User Mode Flags
 const (
-	Voice = uint32(1) << iota
-	Operator
-	Wallops
-	Invisibility
+	UMAway = uint32(1) << iota
+	UMInvisibility
+	UMWallops
+	UMRestricted
+	UMOperator
+	UMLocalOp
+	UMRecNotices
 )
 
-var ModeMap = map[string]uint32{
-	"v" : Voice,
-	"o" : Operator,
-	"w" : Wallops,
-	"i" : Invisibility,
+var UserModeMap = map[string]uint32{
+	"a" : UMAway,
+	"i" : UMInvisibility,
+	"w" : UMWallops,
+	"r" : UMRestricted,
+	"o" : UMOperator,
+	"O" : UMLocalOp,
+	"s" : UMRecNotices,
 }
 
+// Currently Unused
 type IrcUser struct {
 	Nick string
 	User string
@@ -35,6 +42,11 @@ type IrcChannel struct {
 	Counts map[string]int
 	Perms uint32
 
+
+	istream chan *Message
+	//ostream chan *Message
+
+	// Currently Unused
 	Users map[string]*IrcUser
 }
 
@@ -68,6 +80,36 @@ func (c *IrcChannel) SaveStats(finame string) {
 	enc.Encode(c.Counts)
 }
 
+//Take note of joins, parts, and mode changes
+func (c *IrcChannel) handleMessages() {
+	for mes := range c.istream {
+		switch mes.Command {
+		case "JOIN":
+			u := new(IrcUser)
+			u.Host = mes.Host
+			u.Nick = mes.Name
+			u.User = mes.User
+			c.Users[mes.Name] = u
+		case "MODE":
+			ch := mes.Params[1][0]
+			u := c.Users[mes.Params[2]]
+			if ch == '+' {
+				u.Perms |= UserModeMap[mes.Params[1][1:]]
+			} else if ch == '-' {
+				u.Perms &= ^UserModeMap[mes.Params[1][1:]]
+			}
+		case "PART":
+			delete(c.Users, mes.Name)
+		case "NICK":
+			newnick := mes.Content
+			u := c.Users[mes.From]
+			delete(c.Users, mes.From)
+			c.Users[newnick] = u
+			u.Nick = newnick
+		}
+	}
+}
+
 // Send a message to this irc channel
 func (c *IrcChannel) Say(text string) {
 	_,err := fmt.Fprintf(c.con.con, "PRIVMSG %s :%s\r\n", c.Name, text)
@@ -86,3 +128,22 @@ func (c *IrcChannel) Topic(topic string) {
 func (c *IrcChannel) Kick(user, reason string) {
 	c.con.Send(fmt.Sprintf("KICK %s %s :%s", c.Name, user, reason))
 }
+
+/* Commented out until i have a clever way of making it threadsafe
+
+// Returns a channel that will contain messages sent to 
+// the channel represented by this IrcChannel
+func (c *IrcChannel) GetMessageStream() chan *Message {
+	if c.ostream == nil {
+		c.ostream = make(chan *Message, 16)
+	}
+	return c.ostream
+}
+
+// Closes out the message stream for this channel
+func (c *IrcChannel) CloseMessageStream() {
+	close(c.ostream)
+	c.ostream = nil
+}
+
+*/
