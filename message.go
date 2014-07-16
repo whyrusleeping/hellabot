@@ -28,6 +28,9 @@ type Message struct {
 	// Nick of the messages sender (equivalent to Prefix.Name)
 	// Outdated, please use .Name
 	From string
+
+	// For debugging only, do not rely on this staying in the API
+	Raw string
 }
 
 type Prefix struct {
@@ -52,6 +55,7 @@ func ParseMessage(line string) *Message {
 	}
 
 	mes := new(Message)
+	mes.Raw = line
 
 	var pref int
 	if line[0] == ':' {

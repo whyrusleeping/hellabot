@@ -21,7 +21,8 @@ This trigger makes the bot announce to everyone that I said something
 in whatever channel we are in. To make the bot actually use this,
 add it like so:
 
-	mybot := NewIrcConnection("irc.freenode.net:6667","hellabot",false)
+	mybot,err := NewIrcConnection("irc.freenode.net:6667","hellabot",false)
+	// Handle err if you like
 	mybot.AddTrigger(MyTrigger)
 	mybot.Start()
 
@@ -128,6 +129,12 @@ Note: SASL does not require SSL.
 
 For servers that require passwords in the initial registration, simple set
 the Password field of the IrcCon struct before calling Start on it.
+
+### Debugging
+
+The hbot package has a global variable called Verbosity, it controls
+hellabots internal logging levels. Currently it is unfinished, but setting it to 5
+will enable all current logs, including incoming and outgoing messages.
 
 ### Why?
 

@@ -7,11 +7,21 @@ import (
 	"bufio"
 
 	"crypto/tls"
-	"crypto/md5"
 	"encoding/base64"
+	"bytes"
 )
 
-// Verbosity of server logging
+// Log Levels
+const (
+	LError = iota
+	LWarning
+	LTrace
+	LNotice
+	LInfo
+	LNoise
+)
+
+// Verbosity of logging
 var Verbosity int
 
 type IrcCon struct {
@@ -68,7 +78,7 @@ func NewIrcConnection(host, nick string, ssl bool) (*IrcCon, error) {
 }
 
 func (irc *IrcCon) Connect(host string) (err error) {
-	irc.Log(3, "Connect")
+	irc.Log(LTrace, "Connect")
 	if irc.UseSSL {
 		irc.con,err = tls.Dial("tcp", host, &tls.Config{})
 	} else {
@@ -103,7 +113,7 @@ func (irc *IrcCon) handleIncomingMessages() {
 // Handles message speed throtling
 func (irc *IrcCon) handleOutgoingMessages() {
 	for s := range irc.outgoing {
-		irc.Log(4, "Sending: '%s'", s)
+		irc.Log(LNoise, "Sending: '%s'", s)
 		_,err := fmt.Fprint(irc.con, s + "\r\n")
 		if err != nil {
 			panic(err)
@@ -119,18 +129,38 @@ func (irc *IrcCon) Log(level int, format string, args ...interface{}) {
 }
 // Perform SASL authentication
 // ref: https://github.com/atheme/charybdis/blob/master/doc/sasl.txt
-func (irc *IrcCon) Authenticate(user, pass string) {
-	irc.Log(3, "Beginning SASL Authentication")
+func (irc *IrcCon) SASLAuthenticate(user, pass string) {
+	irc.Log(LTrace, "Beginning SASL Authentication")
 	irc.Send("CAP REQ :sasl")
-	irc.sendUserCommand(irc.nick, irc.nick, "8")
 	irc.SetNick(irc.nick)
+	irc.sendUserCommand(irc.nick, irc.nick, "8")
+
+	irc.WaitFor(func (mes *Message) bool {
+		return mes.Content == "sasl" && len(mes.Params) > 1 && mes.Params[1] == "ACK"
+	})
+	irc.Log(LTrace, "Recieved SASL ACK")
 	irc.Send("AUTHENTICATE PLAIN")
 
-	// TODO: Verify that this is the proper way
-	hash := md5.Sum([]byte(pass))
-	passtext := base64.StdEncoding.EncodeToString(hash[:])
-	irc.Send("AUTHENTICATE " + passtext)
+	irc.WaitFor(func (mes *Message) bool {
+		return mes.Command == "AUTHENTICATE" && len(mes.Params) == 1 && mes.Params[0] == "+"
+	})
+
+	irc.Log(LTrace, "Got auth message!")
+
+	out := bytes.Join([][]byte{[]byte(user), []byte(user), []byte(pass)}, []byte{0})
+	encpass := base64.StdEncoding.EncodeToString(out)
+	irc.Send("AUTHENTICATE " + encpass)
+	irc.Send("AUTHENTICATE +")
 	irc.Send("CAP END")
+}
+
+func (irc *IrcCon) WaitFor(filter func (*Message) bool) {
+	for mes := range irc.Incoming {
+		if filter(mes) {
+			return
+		}
+	}
+	return
 }
 
 // A basic set of registration commands
@@ -154,7 +184,7 @@ func (irc *IrcCon) SetNick(nick string) {
 
 // Start up servers various running methods
 func (irc *IrcCon) Start() {
-	irc.Log(3, "Start bot processes.")
+	irc.Log(LTrace, "Start bot processes.")
 	go irc.handleIncomingMessages()
 	go irc.handleOutgoingMessages()
 
@@ -163,7 +193,7 @@ func (irc *IrcCon) Start() {
 	// Only register on an initial connection
 	if !irc.reconnect {
 		if irc.DoSasl {
-			irc.Authenticate(irc.nick, irc.Password)
+			irc.SASLAuthenticate(irc.nick, irc.Password)
 		} else {
 			irc.StandardRegistration()
 		}
