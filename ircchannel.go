@@ -112,10 +112,11 @@ func (c *IrcChannel) handleMessages() {
 
 // Send a message to this irc channel
 func (c *IrcChannel) Say(text string) {
-	_,err := fmt.Fprintf(c.con.con, "PRIVMSG %s :%s\r\n", c.Name, text)
-	if err != nil {
-		panic(err)
+	if c == nil {
+		fmt.Println("tried to send to channel youre not in...")
+		return
 	}
+	c.con.Send(fmt.Sprintf("PRIVMSG %s :%s\r\n", c.Name, text))
 }
 
 // Sets the channels topic (requires bot has proper permissions)
