@@ -52,6 +52,10 @@ type IrcCon struct {
 
 	// Whether or not this is a reconnect instance
 	reconnect bool
+
+	// Duration to wait between sending of messages to avoid being
+	// kicked by the server for flooding (default 200ms)
+	ThrottleDelay time.Duration
 }
 
 // Connect to an irc server
@@ -64,6 +68,7 @@ func NewIrcConnection(host, nick string, ssl bool) (*IrcCon, error) {
 	irc.nick = nick
 	irc.unixastr = fmt.Sprintf("@%s/irc", nick)
 	irc.UseSSL = ssl
+	irc.ThrottleDelay = time.Millisecond * 200
 
 	// Attempt reconnection
 	if !irc.HijackSession() {
@@ -118,10 +123,11 @@ func (irc *IrcCon) handleOutgoingMessages() {
 		if err != nil {
 			panic(err)
 		}
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(irc.ThrottleDelay)
 	}
 }
 
+// TODO: make this logging a little more useful
 func (irc *IrcCon) Log(level int, format string, args ...interface{}) {
 	if Verbosity >= level {
 		fmt.Printf(format + "\n", args...)
@@ -202,6 +208,10 @@ func (irc *IrcCon) Start() {
 
 // Send a message to 'who' (user or channel)
 func (irc *IrcCon) Msg(who, text string) {
+	for len(text) > 400 {
+		irc.Send("PRIVMSG " + who + " :" + text[:400])
+		text = text[400:]
+	}
 	irc.Send("PRIVMSG " + who + " :" + text)
 }
 
