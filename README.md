@@ -36,7 +36,7 @@ For more example triggers, check the examples directory.
 All incoming messages not consumed by a trigger are placed into the IrcCon's
 Incoming channel. If not removed, they will fill up the channel and cause the
 program to hang. To avoid this either write a for-range loop to pull and log
-messages off of Incoming, or simply add a trigger than does nothing but consume
+messages off of Incoming, or simply add a trigger that does nothing but consume
 all messages and make sure it is the last trigger added.
 
 	var EatEverything = &Trigger{
