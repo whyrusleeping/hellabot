@@ -2,8 +2,8 @@
 package main
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
 	"github.com/whyrusleeping/hellabot"
 )
 
@@ -13,7 +13,7 @@ func main() {
 	ichan := flag.String("chan", "#go-nuts", "channel for bot to join")
 	flag.Parse()
 
-	irc,err := hbot.NewIrcConnection(*serv, *nick, false)
+	irc, err := hbot.NewIrcConnection(*serv, *nick, false, false)
 	if err != nil {
 		panic(err)
 	}

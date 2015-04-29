@@ -1,14 +1,14 @@
 package hbot
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"time"
-	"bufio"
 
+	"bytes"
 	"crypto/tls"
 	"encoding/base64"
-	"bytes"
 )
 
 // Log Levels
@@ -40,9 +40,9 @@ type IrcCon struct {
 	// Do SASL authentication
 	DoSasl bool
 
-	con net.Conn
+	con      net.Conn
 	outgoing chan string
-	tr []*Trigger
+	tr       []*Trigger
 
 	// This bots nick
 	nick string
@@ -59,7 +59,7 @@ type IrcCon struct {
 }
 
 // Connect to an irc server
-func NewIrcConnection(host, nick string, ssl bool) (*IrcCon, error) {
+func NewIrcConnection(host, nick string, ssl, recon bool) (*IrcCon, error) {
 	irc := new(IrcCon)
 
 	irc.Incoming = make(chan *Message, 16)
@@ -71,11 +71,18 @@ func NewIrcConnection(host, nick string, ssl bool) (*IrcCon, error) {
 	irc.ThrottleDelay = time.Millisecond * 200
 
 	// Attempt reconnection
-	if !irc.HijackSession() {
+	var hijack bool
+	if recon {
+		hijack = irc.HijackSession()
+		fmt.Println("Hijack: ", hijack)
+	}
+
+	if !hijack {
 		err := irc.Connect(host)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
+		fmt.Println("Connected successfuly!")
 	}
 
 	irc.AddTrigger(pingPong)
@@ -85,9 +92,9 @@ func NewIrcConnection(host, nick string, ssl bool) (*IrcCon, error) {
 func (irc *IrcCon) Connect(host string) (err error) {
 	irc.Log(LTrace, "Connect")
 	if irc.UseSSL {
-		irc.con,err = tls.Dial("tcp", host, &tls.Config{})
+		irc.con, err = tls.Dial("tcp", host, &tls.Config{})
 	} else {
-		irc.con,err = net.Dial("tcp", host)
+		irc.con, err = net.Dial("tcp", host)
 	}
 	return
 }
@@ -98,12 +105,12 @@ func (irc *IrcCon) handleIncomingMessages() {
 	for scan.Scan() {
 		mes := ParseMessage(scan.Text())
 		consumed := false
-		if c,ok := irc.Channels[mes.To]; ok {
+		if c, ok := irc.Channels[mes.To]; ok {
 			c.istream <- mes
 		}
-		for _,t := range irc.tr {
+		for _, t := range irc.tr {
 			if t.Condition(mes) {
-				consumed = t.Action(irc,mes)
+				consumed = t.Action(irc, mes)
 			}
 			if consumed {
 				break
@@ -119,7 +126,7 @@ func (irc *IrcCon) handleIncomingMessages() {
 func (irc *IrcCon) handleOutgoingMessages() {
 	for s := range irc.outgoing {
 		irc.Log(LNoise, "Sending: '%s'", s)
-		_,err := fmt.Fprint(irc.con, s + "\r\n")
+		_, err := fmt.Fprint(irc.con, s+"\r\n")
 		if err != nil {
 			panic(err)
 		}
@@ -130,9 +137,10 @@ func (irc *IrcCon) handleOutgoingMessages() {
 // TODO: make this logging a little more useful
 func (irc *IrcCon) Log(level int, format string, args ...interface{}) {
 	if Verbosity >= level {
-		fmt.Printf(format + "\n", args...)
+		fmt.Printf(format+"\n", args...)
 	}
 }
+
 // Perform SASL authentication
 // ref: https://github.com/atheme/charybdis/blob/master/doc/sasl.txt
 func (irc *IrcCon) SASLAuthenticate(user, pass string) {
@@ -141,13 +149,13 @@ func (irc *IrcCon) SASLAuthenticate(user, pass string) {
 	irc.SetNick(irc.nick)
 	irc.sendUserCommand(irc.nick, irc.nick, "8")
 
-	irc.WaitFor(func (mes *Message) bool {
+	irc.WaitFor(func(mes *Message) bool {
 		return mes.Content == "sasl" && len(mes.Params) > 1 && mes.Params[1] == "ACK"
 	})
 	irc.Log(LTrace, "Recieved SASL ACK")
 	irc.Send("AUTHENTICATE PLAIN")
 
-	irc.WaitFor(func (mes *Message) bool {
+	irc.WaitFor(func(mes *Message) bool {
 		return mes.Command == "AUTHENTICATE" && len(mes.Params) == 1 && mes.Params[0] == "+"
 	})
 
@@ -160,7 +168,7 @@ func (irc *IrcCon) SASLAuthenticate(user, pass string) {
 	irc.Send("CAP END")
 }
 
-func (irc *IrcCon) WaitFor(filter func (*Message) bool) {
+func (irc *IrcCon) WaitFor(filter func(*Message) bool) {
 	for mes := range irc.Incoming {
 		if filter(mes) {
 			return
@@ -231,9 +239,9 @@ func (irc *IrcCon) ChMode(user, channel, mode string) {
 func (irc *IrcCon) Join(ch string) *IrcChannel {
 	irc.Send("JOIN " + ch)
 	ichan := &IrcChannel{
-		Name: ch,
-		con: irc,
-		Counts: make(map[string]int),
+		Name:    ch,
+		con:     irc,
+		Counts:  make(map[string]int),
 		istream: make(chan *Message),
 	}
 	go ichan.handleMessages()
@@ -250,11 +258,11 @@ func (irc *IrcCon) AddTrigger(t *Trigger) {
 // A trigger is used to subscribe and react to events on the Irc Server
 type Trigger struct {
 	// Returns true if this trigger applies to the passed in message
-	Condition func (*Message) bool
+	Condition func(*Message) bool
 
 	// The action to perform if Condition is true
 	// return true if the message was 'consumed'
-	Action func (*IrcCon,*Message) bool
+	Action func(*IrcCon, *Message) bool
 }
 
 // A trigger to respond to the servers ping pong messages
@@ -262,10 +270,10 @@ type Trigger struct {
 // client has timed out and will close the connection.
 // Note: this is automatically added in the IrcCon constructor
 var pingPong = &Trigger{
-	func (m *Message) bool {
+	func(m *Message) bool {
 		return m.Command == "PING"
 	},
-	func (irc *IrcCon, m *Message) bool {
+	func(irc *IrcCon, m *Message) bool {
 		irc.Send("PONG :" + m.Content)
 		return true
 	},
