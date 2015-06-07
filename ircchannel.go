@@ -1,9 +1,9 @@
 package hbot
 
 import (
-	"os"
 	"encoding/json"
 	"fmt"
+	"os"
 )
 
 //User Mode Flags
@@ -18,13 +18,13 @@ const (
 )
 
 var UserModeMap = map[string]uint32{
-	"a" : UMAway,
-	"i" : UMInvisibility,
-	"w" : UMWallops,
-	"r" : UMRestricted,
-	"o" : UMOperator,
-	"O" : UMLocalOp,
-	"s" : UMRecNotices,
+	"a": UMAway,
+	"i": UMInvisibility,
+	"w": UMWallops,
+	"r": UMRestricted,
+	"o": UMOperator,
+	"O": UMLocalOp,
+	"s": UMRecNotices,
 }
 
 // Currently Unused
@@ -37,11 +37,10 @@ type IrcUser struct {
 }
 
 type IrcChannel struct {
-	Name string
-	con *IrcCon
+	Name   string
+	con    *IrcCon
 	Counts map[string]int
-	Perms uint32
-
+	Perms  uint32
 
 	istream chan *Message
 	//ostream chan *Message
@@ -52,7 +51,7 @@ type IrcChannel struct {
 
 // Attempt to load chat frequency stats from a file
 func (c *IrcChannel) TryLoadStats(finame string) bool {
-	fi,err := os.Open(finame)
+	fi, err := os.Open(finame)
 	if err != nil {
 		return false
 	}
@@ -70,7 +69,7 @@ func (c *IrcChannel) TryLoadStats(finame string) bool {
 
 // Write chat frequencies to a file
 func (c *IrcChannel) SaveStats(finame string) {
-	fi,err := os.Create(finame)
+	fi, err := os.Create(finame)
 	if err != nil {
 		panic(err)
 	}
@@ -119,6 +118,12 @@ func (c *IrcChannel) Say(text string) {
 	c.con.Send(fmt.Sprintf("PRIVMSG %s :%s\r\n", c.Name, text))
 }
 
+// Notice performs an action in the channel
+func (c *IrcChannel) Notice(text string) {
+	msg := fmt.Sprintf("\u0001ACTION %s\u0001", text)
+	c.Say(msg)
+}
+
 // Sets the channels topic (requires bot has proper permissions)
 func (c *IrcChannel) Topic(topic string) {
 	str := fmt.Sprintf("TOPIC %s :%s", c.Name, topic)
@@ -132,7 +137,7 @@ func (c *IrcChannel) Kick(user, reason string) {
 
 /* Commented out until i have a clever way of making it threadsafe
 
-// Returns a channel that will contain messages sent to 
+// Returns a channel that will contain messages sent to
 // the channel represented by this IrcChannel
 func (c *IrcChannel) GetMessageStream() chan *Message {
 	if c.ostream == nil {
