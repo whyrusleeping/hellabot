@@ -7,24 +7,28 @@ two functions, one for the condition, and one for the action.
 
 ###Example Trigger
 
-	var MyTrigger = &Trigger{
-		func (mes *Message) bool {
-			return mes.From == "whyrusleeping"
-		},
-		func (irc *IrcCon, mes *Message) bool {
-			irc.Channels[mes.To].Say("whyrusleeping said something")
-			return false
-		},
-	}
+```go
+var MyTrigger = &Trigger{
+	func (mes *Message) bool {
+		return mes.From == "whyrusleeping"
+	},
+	func (irc *IrcCon, mes *Message) bool {
+		irc.Channels[mes.To].Say("whyrusleeping said something")
+		return false
+	},
+}
+```
 
 This trigger makes the bot announce to everyone that I said something
 in whatever channel we are in. To make the bot actually use this,
 add it like so:
 
-	mybot,err := NewIrcConnection("irc.freenode.net:6667","hellabot",false)
-	// Handle err if you like
-	mybot.AddTrigger(MyTrigger)
-	mybot.Start()
+```go
+mybot,err := NewIrcConnection("irc.freenode.net:6667","hellabot",false)
+// Handle err if you like
+mybot.AddTrigger(MyTrigger)
+mybot.Start()
+```
 
 The 'To' field on the message object in triggers will refer to the channel that
 a given message is in, unless it is a server message or a user to user private
@@ -39,64 +43,69 @@ program to hang. To avoid this either write a for-range loop to pull and log
 messages off of Incoming, or simply add a trigger that does nothing but consume
 all messages and make sure it is the last trigger added.
 
-	var EatEverything = &Trigger{
-		func (mes *Message) bool {
-			return true
-		},
-		func (irc *IrcCon, mes *Message) bool {
-			return true
-		},
-	}
+```go
+var EatEverything = &Trigger{
+	func (mes *Message) bool {
+		return true
+	},
+	func (irc *IrcCon, mes *Message) bool {
+		return true
+	},
+}
 
-	mybot.AddTrigger(EatEverything)
+mybot.AddTrigger(EatEverything)
+```
 
 Alternatively:
 
-	for mes := range mybot.Incoming {
-		log.Println(mes)
-	}
+```go
+for mes := range mybot.Incoming {
+	log.Println(mes)
+}
+```
 
 ### The Message struct
 
 The message struct is the primary struct you will be dealing with when building
 triggers or reading off the Incoming channel.
 
-	type Message struct {
-		// The message prefix contains information about who sent the message
-		*Prefix
+```go
+type Message struct {
+	// The message prefix contains information about who sent the message
+	*Prefix
 
-		// Content generally refers to the text of a PRIVMSG
-		Content string
+	// Content generally refers to the text of a PRIVMSG
+	Content string
 
-		// Message command, ie PRIVMSG, MODE, JOIN, NICK, etc
-		Command string
+	// Message command, ie PRIVMSG, MODE, JOIN, NICK, etc
+	Command string
 
-		// Command parameters
-		// For example, which mode for MODE commands
-		Params []string
+	// Command parameters
+	// For example, which mode for MODE commands
+	Params []string
 
-		//Time at which this message was recieved
-		TimeStamp time.Time
+	//Time at which this message was recieved
+	TimeStamp time.Time
 
-		// Entity that this message was addressed to (channel or user)
-		To string
+	// Entity that this message was addressed to (channel or user)
+	To string
 
-		// Nick of the messages sender (equivalent to Prefix.Name)
-		// Outdated, please use .Name
-		From string
-	}
+	// Nick of the messages sender (equivalent to Prefix.Name)
+	// Outdated, please use .Name
+	From string
+}
 
-	type Prefix struct {
-		// The senders nick
-		Name string
+type Prefix struct {
+	// The senders nick
+	Name string
 
-		// The senders username
-		User string
+	// The senders username
+	User string
 
-		// The senders hostname
-		Host string
-	}
-
+	// The senders hostname
+	Host string
+}
+```
 
 
 ### Connection Passing
@@ -116,14 +125,18 @@ Hellabot supports both SSL and SASL for secure connections to whichever server
 you like. To enable SSL simple pass 'true' as the third argument to the
 NewIrcConnection function.
 
-	mysslcon,err := NewIrcConnection("irc.freenode.net:6667","hellabot",true)
-	// Handle err if you like
+```
+mysslcon,err := NewIrcConnection("irc.freenode.net:6667","hellabot",true)
+// Handle err if you like
+```
 
 To use SASL to authenticate with the server:
 
-	mysslcon.DoSasl = true
-	mysslcon.Password = "MyPassword"
-	mysslcon.Start()
+```go
+mysslcon.DoSasl = true
+mysslcon.Password = "MyPassword"
+mysslcon.Start()
+```
 
 Note: SASL does not require SSL.
 
@@ -138,19 +151,21 @@ The hbot package has a global variable called Verbosity, it controls
 hellabots internal logging levels. There are six levels of logging at the time
 of writing, not all are currently used.
 
-	// For error conditions
-	LError 
-	LWarning
+```go
+// For error conditions
+LError 
+LWarning
 
-	// For tracing code paths
-	LTrace
+// For tracing code paths
+LTrace
 
-	// For providing extra info about hellabots state
-	LInfo
-	LNotice
+// For providing extra info about hellabots state
+LInfo
+LNotice
 
-	// For logging every little detail that happens
-	LNoise
+// For logging every little detail that happens
+LNoise
+```
 
 
 ### Why?
