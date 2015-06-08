@@ -223,6 +223,15 @@ func (irc *IrcCon) Msg(who, text string) {
 	irc.Send("PRIVMSG " + who + " :" + text)
 }
 
+// Notice sends a NOTICE message to 'who' (user or channel)
+func (irc *IrcCon) Notice(who, text string) {
+	for len(text) > 400 {
+		irc.Send("NOTICE " + who + " :" + text[:400])
+		text = text[400:]
+	}
+	irc.Send("NOTICE " + who + " :" + text)
+}
+
 // Send any command to the server
 func (irc *IrcCon) Send(command string) {
 	irc.outgoing <- command
