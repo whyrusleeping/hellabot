@@ -2,8 +2,11 @@ package hbot
 
 import (
 	"bufio"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"bytes"
@@ -31,6 +34,9 @@ type IrcCon struct {
 	// Map of irc channels this bot is joined to
 	Channels map[string]*IrcChannel
 
+	// Channels to join after connection
+	JoinAfterConnection []string
+
 	//Server password (optional) only used if set
 	Password string
 
@@ -56,6 +62,54 @@ type IrcCon struct {
 	// Duration to wait between sending of messages to avoid being
 	// kicked by the server for flooding (default 200ms)
 	ThrottleDelay time.Duration
+}
+
+type Config struct {
+	Server, Nick   string
+	Channels       []string
+	SSL, reconnect bool
+}
+
+// load a Json config file
+func LoadConfig(f string) (Config, error) {
+
+	file, err := os.Open(f)
+
+	if err != nil {
+		fmt.Println("Couldn't read config file")
+		return Config{}, err
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	var config Config
+	err = decoder.Decode(&config)
+	if err != nil {
+		fmt.Println("Couldn't parse json file")
+		return Config{}, err
+	}
+	return config, err
+
+}
+
+// Connecto to an irc server, reading configuration from json file
+func NewIrcConnectionFromJSON(config Config) (*IrcCon, Config, error) {
+
+	fmt.Println("Nickname: " + config.Nick)
+	fmt.Println("Server: " + config.Server)
+	nick := flag.String("nick", config.Nick, "nickname for the bot")
+	serv := flag.String("server", config.Server, "hostname and port for irc server to connect to")
+	flag.Parse()
+	irc, err := NewIrcConnection(*serv, *nick, config.SSL, config.reconnect)
+	if config.Channels != nil {
+		fmt.Println("Channels to join on connect")
+		for _, s := range config.Channels {
+			fmt.Println("Channel: " + s)
+			irc.JoinAfterConnection = append(irc.JoinAfterConnection, s)
+		}
+	}
+
+	return irc, config, err
 }
 
 // Connect to an irc server
@@ -199,6 +253,7 @@ func (irc *IrcCon) SetNick(nick string) {
 // Start up servers various running methods
 func (irc *IrcCon) Start() {
 	irc.Log(LTrace, "Start bot processes.")
+
 	go irc.handleIncomingMessages()
 	go irc.handleOutgoingMessages()
 
@@ -211,6 +266,10 @@ func (irc *IrcCon) Start() {
 		} else {
 			irc.StandardRegistration()
 		}
+	}
+
+	for _, s := range irc.JoinAfterConnection {
+		irc.Join(s)
 	}
 }
 
