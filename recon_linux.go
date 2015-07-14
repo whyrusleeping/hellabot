@@ -1,7 +1,7 @@
 package hbot
 
 import (
-	"bitbucket.org/madmo/sendfd"
+	"github.com/mudler/sendfd"
 	"fmt"
 	"net"
 )
