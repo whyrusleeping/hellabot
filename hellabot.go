@@ -324,7 +324,10 @@ func (irc *IrcCon) Join(ch string) *IrcChannel {
 }
 
 func (irc *IrcCon) Close() error {
-	return irc.unixlist.Close()
+	if irc.unixlist != nil {
+		return irc.unixlist.Close()
+	}
+	return nil
 }
 
 func (irc *IrcCon) AddTrigger(t *Trigger) {
