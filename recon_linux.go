@@ -1,8 +1,8 @@
 package hbot
 
 import (
-	"github.com/mudler/sendfd"
 	"fmt"
+	"github.com/mudler/sendfd"
 	"net"
 )
 
@@ -15,9 +15,12 @@ func (irc *IrcCon) StartUnixListener() {
 	if err != nil {
 		panic(err)
 	}
+
+	irc.unixlist = list
 	con, err := list.AcceptUnix()
 	if err != nil {
-		panic(err)
+		fmt.Println("unix listener error: ", err)
+		return
 	}
 	list.Close()
 
@@ -31,7 +34,11 @@ func (irc *IrcCon) StartUnixListener() {
 		panic(err)
 	}
 
-	close(irc.Incoming)
+	select {
+	case <-irc.Incoming:
+	default:
+		close(irc.Incoming)
+	}
 	close(irc.outgoing)
 }
 

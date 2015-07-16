@@ -55,6 +55,7 @@ type IrcCon struct {
 
 	// Unix domain socket address for reconnects (linux only)
 	unixastr string
+	unixlist net.Listener
 
 	// Whether or not this is a reconnect instance
 	reconnect bool
@@ -140,6 +141,7 @@ func NewIrcConnection(host, nick string, ssl, recon bool) (*IrcCon, error) {
 	}
 
 	irc.AddTrigger(pingPong)
+
 	return irc, nil
 }
 
@@ -174,6 +176,7 @@ func (irc *IrcCon) handleIncomingMessages() {
 			irc.Incoming <- mes
 		}
 	}
+	close(irc.Incoming)
 }
 
 // Handles message speed throtling
@@ -182,7 +185,8 @@ func (irc *IrcCon) handleOutgoingMessages() {
 		irc.Log(LNoise, "Sending: '%s'", s)
 		_, err := fmt.Fprint(irc.con, s+"\r\n")
 		if err != nil {
-			panic(err)
+			fmt.Println("write error: ", err)
+			return
 		}
 		time.Sleep(irc.ThrottleDelay)
 	}
@@ -317,6 +321,10 @@ func (irc *IrcCon) Join(ch string) *IrcChannel {
 	irc.Channels[ch] = ichan
 	ichan.TryLoadStats(ch[1:] + ".stats")
 	return ichan
+}
+
+func (irc *IrcCon) Close() error {
+	return irc.unixlist.Close()
 }
 
 func (irc *IrcCon) AddTrigger(t *Trigger) {
