@@ -121,7 +121,7 @@ func NewIrcConnection(host, nick string, ssl, recon bool) (*IrcCon, error) {
 	irc.outgoing = make(chan string, 16)
 	irc.Channels = make(map[string]*IrcChannel)
 	irc.nick = nick
-	irc.unixastr = fmt.Sprintf("@%s/irc", nick)
+	irc.unixastr = fmt.Sprintf("@%s-%s/irc", host, nick)
 	irc.UseSSL = ssl
 	irc.ThrottleDelay = time.Millisecond * 200
 
