@@ -279,6 +279,10 @@ func (irc *IrcCon) Start() {
 
 // Send a message to 'who' (user or channel)
 func (irc *IrcCon) Msg(who, text string) {
+	// if len(text) == 0, return instead of trying to send a empty message
+	if len(text) == 0 {
+		return
+	}
 	for len(text) > 400 {
 		irc.Send("PRIVMSG " + who + " :" + text[:400])
 		text = text[400:]
