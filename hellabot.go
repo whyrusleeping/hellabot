@@ -84,9 +84,8 @@ func LoadConfig(f string) (Config, error) {
 	}
 	defer file.Close()
 
-	decoder := json.NewDecoder(file)
 	var config Config
-	err = decoder.Decode(&config)
+	err = json.NewDecoder(file).Decode(&config)
 	if err != nil {
 		fmt.Println("Couldn't parse json file")
 		return Config{}, err
@@ -95,7 +94,7 @@ func LoadConfig(f string) (Config, error) {
 
 }
 
-// Connecto to an irc server, reading configuration from json file
+// Connect to an irc server, reading configuration from json file
 func NewBotFromJSON(config Config) (*Bot, Config, error) {
 
 	fmt.Println("Nickname: " + config.Nick)
