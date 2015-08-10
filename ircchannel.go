@@ -38,7 +38,7 @@ type IrcUser struct {
 
 type IrcChannel struct {
 	Name   string
-	con    *IrcCon
+	con    *Bot
 	Counts map[string]int
 	Perms  uint32
 
