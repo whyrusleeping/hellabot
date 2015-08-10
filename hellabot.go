@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"time"
+
+	"github.com/sorcix/irc"
 
 	"bytes"
 	"crypto/tls"
@@ -160,6 +163,7 @@ func (irc *IrcCon) handleIncomingMessages() {
 	scan := bufio.NewScanner(irc.con)
 	for scan.Scan() {
 		mes := ParseMessage(scan.Text())
+		log.Println(mes)
 		consumed := false
 		if c, ok := irc.Channels[mes.To]; ok {
 			c.istream <- mes
@@ -360,4 +364,43 @@ var pingPong = &Trigger{
 		irc.Send("PONG :" + m.Content)
 		return true
 	},
+}
+
+type Message struct {
+	// irc.Message from sorcix
+	irc.Message
+	// Content generally refers to the text of a PRIVMSG
+	Content string
+
+	//Time at which this message was recieved
+	TimeStamp time.Time
+
+	// Entity that this message was addressed to (channel or user)
+	To string
+
+	// Nick of the messages sender (equivalent to Prefix.Name)
+	// Outdated, please use .Name
+	From string
+
+	// For debugging only, do not rely on this staying in the API
+	Raw string
+}
+
+// ParseMessage takes a string and attempts to create a Message struct.
+// Returns nil if the Message is invalid.
+func ParseMessage(raw string) (m *Message) {
+	m = new(Message)
+	m.Message = *irc.ParseMessage(raw)
+	m.Content = m.Trailing
+
+	if len(m.Params) > 0 {
+		m.To = m.Params[0]
+	}
+	if m.Prefix != nil {
+		m.From = m.Prefix.Name
+	}
+	m.TimeStamp = time.Now()
+
+	return m
+
 }
