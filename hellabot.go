@@ -381,9 +381,6 @@ type Message struct {
 	// Nick of the messages sender (equivalent to Prefix.Name)
 	// Outdated, please use .Name
 	From string
-
-	// For debugging only, do not rely on this staying in the API
-	Raw string
 }
 
 // ParseMessage takes a string and attempts to create a Message struct.
