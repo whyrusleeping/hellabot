@@ -8,12 +8,12 @@ two functions, one for the condition, and one for the action.
 ###Example Trigger
 
 ```go
-var MyTrigger = &Trigger{
+var MyTrigger = &hbot.Trigger{
 	func (mes *Message) bool {
 		return mes.From == "whyrusleeping"
 	},
-	func (irc *IrcCon, mes *Message) bool {
-		irc.Channels[mes.To].Say("whyrusleeping said something")
+	func (irc *hbot.Bot, mes *hbot.Message) bool {
+		irc.Msg(mes.To, "whyrusleeping said something")
 		return false
 	},
 }
@@ -24,7 +24,7 @@ in whatever channel we are in. To make the bot actually use this,
 add it like so:
 
 ```go
-mybot,err := NewIrcConnection("irc.freenode.net:6667","hellabot",false)
+mybot,err := hbot.NewBot("irc.freenode.net:6667","hellabot",false, false)
 // Handle err if you like
 mybot.AddTrigger(MyTrigger)
 mybot.Start()
@@ -44,11 +44,11 @@ messages off of Incoming, or simply add a trigger that does nothing but consume
 all messages and make sure it is the last trigger added.
 
 ```go
-var EatEverything = &Trigger{
-	func (mes *Message) bool {
+var EatEverything = &hbot.Trigger{
+	func (mes *hbot.Message) bool {
 		return true
 	},
-	func (irc *IrcCon, mes *Message) bool {
+	func (irc *hbot.Bot, mes *hbot.Message) bool {
 		return true
 	},
 }
@@ -126,14 +126,14 @@ you like. To enable SSL simple pass 'true' as the third argument to the
 NewIrcConnection function.
 
 ```
-mysslcon,err := NewIrcConnection("irc.freenode.net:6667","hellabot",true)
+mysslcon,err := hbot.NewBot("irc.freenode.net:6667","hellabot",true, false)
 // Handle err if you like
 ```
 
 To use SASL to authenticate with the server:
 
 ```go
-mysslcon.DoSasl = true
+mysslcon.DoSASL = true
 mysslcon.Password = "MyPassword"
 mysslcon.Start()
 ```
@@ -147,26 +147,16 @@ the Password field of the IrcCon struct before calling its Start method.
 
 ### Debugging
 
-The hbot package has a global variable called Verbosity. It controls
-hellabot's internal logging levels. There are six levels of logging at the time
-of this writing, but not all are currently used.
+Hellabot uses github.com/inconshreveable/log15 for logging.
+See http://godoc.org/github.com/inconshreveable/log15
 
+By default it discards all logs. In order to see any logs, give it a better handler.
+Example: This would only show INFO level and above logs, logging to STDOUT
 ```go
-// For error conditions
-LError 
-LWarning
-
-// For tracing code paths
-LTrace
-
-// For providing extra info about hellabots state
-LInfo
-LNotice
-
-// For logging every little detail that happens
-LNoise
+import log "gopkg.in/inconshreveable/log15.v2"
+logHandler := log.LvlFilterHandler(log.LvlInfo, log.StdoutHandler)
+mybot.Logger.SetHandler(logHandler)
 ```
-
 
 ### Why?
 
