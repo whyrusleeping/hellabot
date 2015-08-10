@@ -50,7 +50,7 @@ type Bot struct {
 
 	con      net.Conn
 	outgoing chan string
-	tr       []*Trigger
+	triggers []*Trigger
 
 	// This bots nick
 	nick string
@@ -168,7 +168,7 @@ func (bot *Bot) handleIncomingMessages() {
 		if c, ok := bot.Channels[msg.To]; ok {
 			c.istream <- msg
 		}
-		for _, t := range bot.tr {
+		for _, t := range bot.triggers {
 			if t.Condition(msg) {
 				consumed = t.Action(bot, msg)
 			}
@@ -339,7 +339,7 @@ func (bot *Bot) Close() error {
 }
 
 func (bot *Bot) AddTrigger(t *Trigger) {
-	bot.tr = append(bot.tr, t)
+	bot.triggers = append(bot.triggers, t)
 }
 
 // A trigger is used to subscribe and react to events on the bot Server
