@@ -296,6 +296,10 @@ func (bot *Bot) Msg(who, text string) {
 
 // Notice sends a NOTICE message to 'who' (user or channel)
 func (bot *Bot) Notice(who, text string) {
+	// if len(text) == 0, return instead of trying to send a empty notice
+	if len(text) == 0 {
+		return
+	}
 	for len(text) > 400 {
 		bot.Send("NOTICE " + who + " :" + text[:400])
 		text = text[400:]
