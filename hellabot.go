@@ -317,7 +317,7 @@ func (bot *Bot) Action(who, text string) {
 }
 
 // Sets the channel 'c' topic (requires bot has proper permissions)
-func (bot *botl) Topic(c, topic string) {
+func (bot *Bot) Topic(c, topic string) {
 	str := fmt.Sprintf("TOPIC %s :%s", c, topic)
 	bot.Send(str)
 }
