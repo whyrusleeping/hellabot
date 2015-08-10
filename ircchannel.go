@@ -28,7 +28,7 @@ var UserModeMap = map[string]uint32{
 }
 
 // Currently Unused
-type IrcUser struct {
+type User struct {
 	Nick string
 	User string
 	Host string
@@ -46,7 +46,7 @@ type Channel struct {
 	//ostream chan *Message
 
 	// Currently Unused
-	Users map[string]*IrcUser
+	Users map[string]*User
 }
 
 // Attempt to load chat frequency stats from a file
@@ -84,7 +84,7 @@ func (c *Channel) handleMessages() {
 	for mes := range c.istream {
 		switch mes.Command {
 		case "JOIN":
-			u := new(IrcUser)
+			u := new(User)
 			u.Host = mes.Host
 			u.Nick = mes.Name
 			u.User = mes.User
