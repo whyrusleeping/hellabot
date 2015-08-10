@@ -115,19 +115,22 @@ func (c *Channel) Say(text string) {
 		fmt.Println("tried to send to channel youre not in...")
 		return
 	}
-	c.con.Send(fmt.Sprintf("PRIVMSG %s :%s\r\n", c.Name, text))
+	c.con.Msg(c.Name, text)
 }
 
-// Notice performs an action in the channel
+// Notice sends a NOTICE to the the channel
 func (c *Channel) Notice(text string) {
-	msg := fmt.Sprintf("\u0001ACTION %s\u0001", text)
-	c.Say(msg)
+	c.con.Notice(c.Name, text)
+}
+
+// Action performs an action in the channel
+func (c *Channel) Action(text string) {
+	c.con.Action(c.Name, text)
 }
 
 // Sets the channels topic (requires bot has proper permissions)
 func (c *Channel) Topic(topic string) {
-	str := fmt.Sprintf("TOPIC %s :%s", c.Name, topic)
-	c.con.Send(str)
+	c.con.Topic(c.Name, topic)
 }
 
 // Kick a user in this channel, reason optional (requires permissions)

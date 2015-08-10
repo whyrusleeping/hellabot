@@ -307,6 +307,22 @@ func (bot *Bot) Notice(who, text string) {
 	bot.Send("NOTICE " + who + " :" + text)
 }
 
+// Send a action to 'who' (user or channel)
+func (bot *Bot) Action(who, text string) {
+	// if len(text) == 0, return instead of trying to send a empty action
+	if len(text) == 0 {
+		return
+	}
+	msg := fmt.Sprintf("\u0001ACTION %s\u0001", text)
+	bot.Msg(who, msg)
+}
+
+// Sets the channel 'c' topic (requires bot has proper permissions)
+func (bot *botl) Topic(c, topic string) {
+	str := fmt.Sprintf("TOPIC %s :%s", c, topic)
+	bot.Send(str)
+}
+
 // Send any command to the server
 func (bot *Bot) Send(command string) {
 	bot.outgoing <- command
