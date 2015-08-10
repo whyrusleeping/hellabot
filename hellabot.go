@@ -34,7 +34,7 @@ type Bot struct {
 	Incoming chan *Message
 
 	// Map of irc channels this bot is joined to
-	Channels map[string]*IrcChannel
+	Channels map[string]*Channel
 
 	// Channels to join after connection
 	JoinAfterConnection []string
@@ -121,7 +121,7 @@ func NewBot(host, nick string, ssl, recon bool) (*Bot, error) {
 
 	bot.Incoming = make(chan *Message, 16)
 	bot.outgoing = make(chan string, 16)
-	bot.Channels = make(map[string]*IrcChannel)
+	bot.Channels = make(map[string]*Channel)
 	bot.nick = nick
 	bot.unixastr = fmt.Sprintf("@%s-%s/bot", host, nick)
 	bot.UseSSL = ssl
@@ -316,9 +316,9 @@ func (bot *Bot) ChMode(user, channel, mode string) {
 }
 
 // Join a channel and register its struct in the IrcCons channel map
-func (bot *Bot) Join(ch string) *IrcChannel {
+func (bot *Bot) Join(ch string) *Channel {
 	bot.Send("JOIN " + ch)
-	ichan := &IrcChannel{
+	ichan := &Channel{
 		Name:    ch,
 		con:     bot,
 		Counts:  make(map[string]int),

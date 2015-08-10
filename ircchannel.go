@@ -36,7 +36,7 @@ type IrcUser struct {
 	Perms uint32
 }
 
-type IrcChannel struct {
+type Channel struct {
 	Name   string
 	con    *Bot
 	Counts map[string]int
@@ -50,7 +50,7 @@ type IrcChannel struct {
 }
 
 // Attempt to load chat frequency stats from a file
-func (c *IrcChannel) TryLoadStats(finame string) bool {
+func (c *Channel) TryLoadStats(finame string) bool {
 	fi, err := os.Open(finame)
 	if err != nil {
 		return false
@@ -68,7 +68,7 @@ func (c *IrcChannel) TryLoadStats(finame string) bool {
 }
 
 // Write chat frequencies to a file
-func (c *IrcChannel) SaveStats(finame string) {
+func (c *Channel) SaveStats(finame string) {
 	fi, err := os.Create(finame)
 	if err != nil {
 		panic(err)
@@ -80,7 +80,7 @@ func (c *IrcChannel) SaveStats(finame string) {
 }
 
 //Take note of joins, parts, and mode changes
-func (c *IrcChannel) handleMessages() {
+func (c *Channel) handleMessages() {
 	for mes := range c.istream {
 		switch mes.Command {
 		case "JOIN":
@@ -110,7 +110,7 @@ func (c *IrcChannel) handleMessages() {
 }
 
 // Send a message to this irc channel
-func (c *IrcChannel) Say(text string) {
+func (c *Channel) Say(text string) {
 	if c == nil {
 		fmt.Println("tried to send to channel youre not in...")
 		return
@@ -119,19 +119,19 @@ func (c *IrcChannel) Say(text string) {
 }
 
 // Notice performs an action in the channel
-func (c *IrcChannel) Notice(text string) {
+func (c *Channel) Notice(text string) {
 	msg := fmt.Sprintf("\u0001ACTION %s\u0001", text)
 	c.Say(msg)
 }
 
 // Sets the channels topic (requires bot has proper permissions)
-func (c *IrcChannel) Topic(topic string) {
+func (c *Channel) Topic(topic string) {
 	str := fmt.Sprintf("TOPIC %s :%s", c.Name, topic)
 	c.con.Send(str)
 }
 
 // Kick a user in this channel, reason optional (requires permissions)
-func (c *IrcChannel) Kick(user, reason string) {
+func (c *Channel) Kick(user, reason string) {
 	c.con.Send(fmt.Sprintf("KICK %s %s :%s", c.Name, user, reason))
 }
 
