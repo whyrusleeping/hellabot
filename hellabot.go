@@ -46,7 +46,7 @@ type Bot struct {
 	UseSSL bool
 
 	// Do SASL authentication
-	DoSasl bool
+	DoSASL bool
 
 	con      net.Conn
 	outgoing chan string
@@ -269,7 +269,7 @@ func (bot *Bot) Start() {
 
 	// Only register on an initial connection
 	if !bot.reconnect {
-		if bot.DoSasl {
+		if bot.DoSASL {
 			bot.SASLAuthenticate(bot.nick, bot.Password)
 		} else {
 			bot.StandardRegistration()
