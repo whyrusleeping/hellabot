@@ -3,21 +3,15 @@ package hbot
 import (
 	"strings"
 	"time"
+
+	"github.com/sorcix/irc"
 )
 
 type Message struct {
-	// The message prefix contains information about who sent the message
-	*Prefix
-
+	// irc.Message from sorcix
+	irc.Message
 	// Content generally refers to the text of a PRIVMSG
 	Content string
-
-	// Message command, ie PRIVMSG, MODE, JOIN, NICK, etc
-	Command string
-
-	// Command parameters
-	// For example, which mode for MODE commands
-	Params []string
 
 	//Time at which this message was recieved
 	TimeStamp time.Time
@@ -32,18 +26,6 @@ type Message struct {
 	// For debugging only, do not rely on this staying in the API
 	Raw string
 }
-
-type Prefix struct {
-	// The senders nick
-	Name string
-
-	// The senders username
-	User string
-
-	// The senders hostname
-	Host string
-}
-
 
 // Parse a string of text from the irc server into a Message struct
 // Taken from: https://github.com/sorcix/irc
@@ -66,7 +48,7 @@ func ParseMessage(line string) *Message {
 			return nil
 		}
 
-		mes.Prefix = ParsePrefix(line[1:pref])
+		mes.Prefix = irc.ParsePrefix(line[1:pref])
 		// Skip space at the end of the prefix
 		pref++
 	}
@@ -111,35 +93,4 @@ func ParseMessage(line string) *Message {
 	mes.TimeStamp = time.Now()
 
 	return mes
-}
-
-// Parse user information from string
-// format: nick!user@hostname
-// Taken from: https://github.com/sorcix/irc
-// All credit for this function goes to github user sorcix
-func ParsePrefix(prefix string) *Prefix {
-	p := new(Prefix)
-
-	user := strings.IndexByte(prefix, '!')
-	host := strings.IndexByte(prefix, '@')
-
-	switch {
-	case user > 0 && host > user:
-		p.Name = prefix[:user]
-		p.User = prefix[user+1 : host]
-		p.Host = prefix[host+1:]
-
-	case user > 0:
-		p.Name = prefix[:user]
-		p.User = prefix[user+1:]
-
-	case host > 0:
-		p.Name = prefix[:host]
-		p.Host = prefix[host+1:]
-
-	default:
-		p.Name = prefix
-	}
-
-	return p
 }
