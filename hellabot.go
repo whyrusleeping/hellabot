@@ -22,9 +22,6 @@ type Bot struct {
 	// Channel for user to read incoming messages
 	Incoming chan *Message
 
-	// Map of irc channels this bot is joined to
-	Channels map[string]*Channel
-
 	// Channels to join after connection
 	JoinAfterConnection []string
 
@@ -111,7 +108,6 @@ func NewBot(host, nick string, ssl, recon bool) (*Bot, error) {
 
 	bot.Incoming = make(chan *Message, 16)
 	bot.outgoing = make(chan string, 16)
-	bot.Channels = make(map[string]*Channel)
 	bot.nick = nick
 	bot.unixastr = fmt.Sprintf("@%s-%s/bot", host, nick)
 	bot.UseSSL = ssl
@@ -154,14 +150,11 @@ func (bot *Bot) Connect(host string) (err error) {
 func (bot *Bot) handleIncomingMessages() {
 	scan := bufio.NewScanner(bot.con)
 	for scan.Scan() {
+		bot.Debug("Raw", "line", scan.Text())
 		// Disconnect if we have seen absolutely nothing for 300 seconds
 		bot.con.SetDeadline(time.Now().Add(300 * time.Second))
 		msg := ParseMessage(scan.Text())
-		bot.Debug("Incoming", "data", msg)
 		consumed := false
-		if c, ok := bot.Channels[msg.To]; ok {
-			c.istream <- msg
-		}
 		for _, t := range bot.triggers {
 			if t.Condition(msg) {
 				consumed = t.Action(bot, msg)
@@ -323,20 +316,9 @@ func (bot *Bot) ChMode(user, channel, mode string) {
 	bot.Send("MODE " + channel + " " + mode + " " + user)
 }
 
-// Join a channel and register its struct in the IrcCons channel map
-func (bot *Bot) Join(ch string) *Channel {
+// Join a channel
+func (bot *Bot) Join(ch string) {
 	bot.Send("JOIN " + ch)
-	ichan := &Channel{
-		Name:    ch,
-		bot:     bot,
-		Counts:  make(map[string]int),
-		istream: make(chan *Message),
-	}
-	go ichan.handleMessages()
-
-	bot.Channels[ch] = ichan
-	ichan.TryLoadStats(ch[1:] + ".stats")
-	return ichan
 }
 
 func (bot *Bot) Close() error {
@@ -400,6 +382,8 @@ func ParseMessage(raw string) (m *Message) {
 
 	if len(m.Params) > 0 {
 		m.To = m.Params[0]
+	} else if m.Command == "JOIN" {
+		m.To = m.Trailing
 	}
 	if m.Prefix != nil {
 		m.From = m.Prefix.Name
