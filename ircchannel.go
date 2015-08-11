@@ -38,7 +38,7 @@ type User struct {
 
 type Channel struct {
 	Name   string
-	con    *Bot
+	bot    *Bot
 	Counts map[string]int
 	Perms  uint32
 
@@ -115,27 +115,27 @@ func (c *Channel) Say(text string) {
 		fmt.Println("tried to send to channel youre not in...")
 		return
 	}
-	c.con.Msg(c.Name, text)
+	c.bot.Msg(c.Name, text)
 }
 
 // Notice sends a NOTICE to the the channel
 func (c *Channel) Notice(text string) {
-	c.con.Notice(c.Name, text)
+	c.bot.Notice(c.Name, text)
 }
 
 // Action performs an action in the channel
 func (c *Channel) Action(text string) {
-	c.con.Action(c.Name, text)
+	c.bot.Action(c.Name, text)
 }
 
 // Sets the channels topic (requires bot has proper permissions)
 func (c *Channel) Topic(topic string) {
-	c.con.Topic(c.Name, topic)
+	c.bot.Topic(c.Name, topic)
 }
 
 // Kick a user in this channel, reason optional (requires permissions)
 func (c *Channel) Kick(user, reason string) {
-	c.con.Send(fmt.Sprintf("KICK %s %s :%s", c.Name, user, reason))
+	c.bot.Send(fmt.Sprintf("KICK %s %s :%s", c.Name, user, reason))
 }
 
 /* Commented out until i have a clever way of making it threadsafe

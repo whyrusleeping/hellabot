@@ -2,8 +2,9 @@ package hbot
 
 import (
 	"fmt"
-	"github.com/mudler/sendfd"
 	"net"
+
+	"github.com/mudler/sendfd"
 )
 
 func (irc *Bot) StartUnixListener() {

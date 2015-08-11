@@ -339,7 +339,7 @@ func (bot *Bot) Join(ch string) *Channel {
 	bot.Send("JOIN " + ch)
 	ichan := &Channel{
 		Name:    ch,
-		con:     bot,
+		bot:     bot,
 		Counts:  make(map[string]int),
 		istream: make(chan *Message),
 	}
