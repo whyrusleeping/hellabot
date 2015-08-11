@@ -47,14 +47,13 @@ func (irc *Bot) StartUnixListener() {
 func (irc *Bot) HijackSession() bool {
 	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr)
 	if err != nil {
-		irc.Log(LWarning, "could not resolve unix socket")
+		irc.Error("could not resolve unix socket")
 		return false
 	}
 
 	con, err := net.DialUnix("unix", nil, unaddr)
 	if err != nil {
-		fmt.Println("Couldnt restablish connection, no prior bot.")
-		fmt.Println(err)
+		irc.Error("Couldnt restablish connection, no prior bot:", err)
 		return false
 	}
 

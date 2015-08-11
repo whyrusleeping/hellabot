@@ -10,24 +10,13 @@ import (
 	"time"
 
 	"github.com/sorcix/irc"
+	log "gopkg.in/inconshreveable/log15.v2"
+	logext "gopkg.in/inconshreveable/log15.v2/ext"
 
 	"bytes"
 	"crypto/tls"
 	"encoding/base64"
 )
-
-// Log Levels
-const (
-	LError = iota
-	LWarning
-	LTrace
-	LNotice
-	LInfo
-	LNoise
-)
-
-// Verbosity of logging
-var Verbosity int
 
 type Bot struct {
 	// Channel for user to read incoming messages
@@ -65,6 +54,8 @@ type Bot struct {
 	// Duration to wait between sending of messages to avoid being
 	// kicked by the server for flooding (default 200ms)
 	ThrottleDelay time.Duration
+	// Log15 loggger
+	log.Logger
 }
 
 type Config struct {
@@ -125,12 +116,14 @@ func NewBot(host, nick string, ssl, recon bool) (*Bot, error) {
 	bot.unixastr = fmt.Sprintf("@%s-%s/bot", host, nick)
 	bot.UseSSL = ssl
 	bot.ThrottleDelay = time.Millisecond * 200
+	bot.Logger = log.New("id", logext.RandId(8), "host", host, "nick", log.Lazy{bot.getNick})
+	bot.Logger.SetHandler(log.DiscardHandler())
 
 	// Attempt reconnection
 	var hijack bool
 	if recon {
 		hijack = bot.HijackSession()
-		fmt.Println("Hijack: ", hijack)
+		bot.Debug("Hijack", hijack)
 	}
 
 	if !hijack {
@@ -138,16 +131,17 @@ func NewBot(host, nick string, ssl, recon bool) (*Bot, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("Connected successfuly!")
+		bot.Info("Connected successfully!")
 	}
 
 	bot.AddTrigger(pingPong)
-
 	return bot, nil
 }
-
+func (bot *Bot) getNick() string {
+	return bot.nick
+}
 func (bot *Bot) Connect(host string) (err error) {
-	bot.Log(LTrace, "Connect")
+	bot.Debug("Connect")
 	if bot.UseSSL {
 		bot.con, err = tls.Dial("tcp", host, &tls.Config{})
 	} else {
@@ -163,6 +157,7 @@ func (bot *Bot) handleIncomingMessages() {
 		// Disconnect if we have seen absolutely nothing for 300 seconds
 		bot.con.SetDeadline(time.Now().Add(300 * time.Second))
 		msg := ParseMessage(scan.Text())
+		bot.Debug("Incoming", "data", msg)
 		consumed := false
 		if c, ok := bot.Channels[msg.To]; ok {
 			c.istream <- msg
@@ -185,27 +180,20 @@ func (bot *Bot) handleIncomingMessages() {
 // Handles message speed throtling
 func (bot *Bot) handleOutgoingMessages() {
 	for s := range bot.outgoing {
-		bot.Log(LNoise, "Sending: '%s'", s)
+		bot.Debug("Outgoing", "data", s)
 		_, err := fmt.Fprint(bot.con, s+"\r\n")
 		if err != nil {
-			fmt.Println("write error: ", err)
+			bot.Error("write error: ", err)
 			return
 		}
 		time.Sleep(bot.ThrottleDelay)
 	}
 }
 
-// TODO: make this logging a little more useful
-func (bot *Bot) Log(level int, format string, args ...interface{}) {
-	if Verbosity >= level {
-		fmt.Printf(format+"\n", args...)
-	}
-}
-
 // Perform SASL authentication
 // ref: https://github.com/atheme/charybdis/blob/master/doc/sasl.txt
 func (bot *Bot) SASLAuthenticate(user, pass string) {
-	bot.Log(LTrace, "Beginning SASL Authentication")
+	bot.Debug("Beginning SASL Authentication")
 	bot.Send("CAP REQ :sasl")
 	bot.SetNick(bot.nick)
 	bot.sendUserCommand(bot.nick, bot.nick, "8")
@@ -213,14 +201,14 @@ func (bot *Bot) SASLAuthenticate(user, pass string) {
 	bot.WaitFor(func(mes *Message) bool {
 		return mes.Content == "sasl" && len(mes.Params) > 1 && mes.Params[1] == "ACK"
 	})
-	bot.Log(LTrace, "Recieved SASL ACK")
+	bot.Debug("Recieved SASL ACK")
 	bot.Send("AUTHENTICATE PLAIN")
 
 	bot.WaitFor(func(mes *Message) bool {
 		return mes.Command == "AUTHENTICATE" && len(mes.Params) == 1 && mes.Params[0] == "+"
 	})
 
-	bot.Log(LTrace, "Got auth message!")
+	bot.Debug("Got auth message!")
 
 	out := bytes.Join([][]byte{[]byte(user), []byte(user), []byte(pass)}, []byte{0})
 	encpass := base64.StdEncoding.EncodeToString(out)
@@ -259,7 +247,7 @@ func (bot *Bot) SetNick(nick string) {
 
 // Start up servers various running methods
 func (bot *Bot) Start() {
-	bot.Log(LTrace, "Start bot processes.")
+	bot.Debug("Start bot processes.")
 
 	go bot.handleIncomingMessages()
 	go bot.handleOutgoingMessages()
