@@ -242,6 +242,7 @@ func (bot *Bot) sendUserCommand(user, realname, mode string) {
 }
 
 func (bot *Bot) SetNick(nick string) {
+	bot.nick = nick
 	bot.Send(fmt.Sprintf("NICK %s", nick))
 }
 
