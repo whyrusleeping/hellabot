@@ -375,6 +375,7 @@ type Message struct {
 
 // ParseMessage takes a string and attempts to create a Message struct.
 // Returns nil if the Message is invalid.
+// TODO: Maybe just use sorbix/irc if we can be without the custom stuff?
 func ParseMessage(raw string) (m *Message) {
 	m = new(Message)
 	m.Message = *irc.ParseMessage(raw)
