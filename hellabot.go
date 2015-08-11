@@ -150,10 +150,10 @@ func (bot *Bot) Connect(host string) (err error) {
 func (bot *Bot) handleIncomingMessages() {
 	scan := bufio.NewScanner(bot.con)
 	for scan.Scan() {
-		bot.Debug("Raw", "line", scan.Text())
 		// Disconnect if we have seen absolutely nothing for 300 seconds
 		bot.con.SetDeadline(time.Now().Add(300 * time.Second))
 		msg := ParseMessage(scan.Text())
+		bot.Debug("Raw", "line", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
 		consumed := false
 		for _, t := range bot.triggers {
 			if t.Condition(msg) {
@@ -392,5 +392,4 @@ func ParseMessage(raw string) (m *Message) {
 	m.TimeStamp = time.Now()
 
 	return m
-
 }
