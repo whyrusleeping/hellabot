@@ -363,7 +363,7 @@ var pingPong = &Trigger{
 
 type Message struct {
 	// irc.Message from sorcix
-	irc.Message
+	*irc.Message
 	// Content generally refers to the text of a PRIVMSG
 	Content string
 
@@ -383,7 +383,7 @@ type Message struct {
 // TODO: Maybe just use sorbix/irc if we can be without the custom stuff?
 func ParseMessage(raw string) (m *Message) {
 	m = new(Message)
-	m.Message = *irc.ParseMessage(raw)
+	m.Message = irc.ParseMessage(raw)
 	m.Content = m.Trailing
 
 	if len(m.Params) > 0 {
