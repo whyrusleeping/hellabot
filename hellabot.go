@@ -18,6 +18,11 @@ import (
 	"encoding/base64"
 )
 
+const (
+	// PingTimeout is the maximum amount of time we will go without seeing any data before disconnecting
+	PingTimeout = 300 * time.Second
+)
+
 type Bot struct {
 	// Channel for user to read incoming messages
 	Incoming chan *Message
@@ -151,7 +156,7 @@ func (bot *Bot) handleIncomingMessages() {
 	scan := bufio.NewScanner(bot.con)
 	for scan.Scan() {
 		// Disconnect if we have seen absolutely nothing for 300 seconds
-		bot.con.SetDeadline(time.Now().Add(300 * time.Second))
+		bot.con.SetDeadline(time.Now().Add(PingTimeout))
 		msg := ParseMessage(scan.Text())
 		bot.Debug("Raw", "line", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
 		consumed := false
