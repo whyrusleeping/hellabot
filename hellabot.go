@@ -47,6 +47,10 @@ type Bot struct {
 	log.Logger
 }
 
+func (bot *Bot) String() string {
+	return fmt.Sprintf("Server: %s, Channels: %v, Nick: %s", bot.Host, bot.Channels, bot.Nick)
+}
+
 // Connect to an irc server
 func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	// Defaults are set here
