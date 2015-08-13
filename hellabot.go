@@ -117,7 +117,7 @@ func (bot *Bot) handleIncomingMessages() {
 		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
 		consumed := false
 		for _, t := range bot.triggers {
-			if t.Condition(msg) {
+			if t.Condition(bot, msg) {
 				consumed = t.Action(bot, msg)
 			}
 			if consumed {
@@ -293,7 +293,7 @@ func (bot *Bot) AddTrigger(t *Trigger) {
 // A trigger is used to subscribe and react to events on the bot Server
 type Trigger struct {
 	// Returns true if this trigger applies to the passed in message
-	Condition func(*Message) bool
+	Condition func(*Bot, *Message) bool
 
 	// The action to perform if Condition is true
 	// return true if the message was 'consumed'
@@ -305,7 +305,7 @@ type Trigger struct {
 // client has timed out and will close the connection.
 // Note: this is automatically added in the IrcCon constructor
 var pingPong = &Trigger{
-	func(m *Message) bool {
+	func(bot *Bot, m *Message) bool {
 		return m.Command == "PING"
 	},
 	func(bot *Bot, m *Message) bool {
@@ -314,7 +314,7 @@ var pingPong = &Trigger{
 	},
 }
 var joinChannels = &Trigger{
-	func(m *Message) bool {
+	func(bot *Bot, m *Message) bool {
 		return m.Command == irc.RPL_WELCOME // || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
 	},
 	func(bot *Bot, m *Message) bool {
