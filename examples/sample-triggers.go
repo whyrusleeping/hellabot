@@ -2,16 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/whyrusleeping/hellabot"
 	"io/ioutil"
 	"os"
 	"os/exec"
+
+	"github.com/whyrusleeping/hellabot"
 )
 
 // This trigger will op people in the given list who ask by saying "-opme"
 var oplist = []string{"whyrusleeping", "tlane", "ltorvalds"}
 var OpPeople = &hbot.Trigger{
-	func(mes *hbot.Message) bool {
+	func(bot *hbot.Bot, mes *hbot.Message) bool {
 		if mes.Content == "-opme" {
 			for _, s := range oplist {
 				if mes.From == s {
@@ -29,7 +30,7 @@ var OpPeople = &hbot.Trigger{
 
 // This trigger will say the contents of the file "info" when prompted
 var SayInfoMessage = &hbot.Trigger{
-	func(m *hbot.Message) bool {
+	func(bot *hbot.Bot, mes *hbot.Message) bool {
 		return m.Command == "PRIVMSG" && m.Content == "-info"
 	},
 	func(irc *hbot.Bot, mes *hbot.Message) bool {
@@ -48,7 +49,7 @@ var SayInfoMessage = &hbot.Trigger{
 // perform the mpc action of the same name to control an mpd server running
 // on localhost
 var Mpc = &hbot.Trigger{
-	func(m *hbot.Message) bool {
+	func(bot *hbot.Bot, mes *hbot.Message) bool {
 		return m.Command == "PRIVMSG" && (m.Content == "-toggle" || m.Content == "-next" || m.Content == "-prev")
 	},
 	func(irc *hbot.Bot, m *hbot.Message) bool {
@@ -70,24 +71,5 @@ var Mpc = &hbot.Trigger{
 			fmt.Printf("error: %s\n", err)
 		}
 		return true
-	},
-}
-
-//Log chat frequencies (Supported by channel objects)
-var LogChatFreqs = &hbot.Trigger{
-	func(m *hbot.Message) bool {
-		return m.Command == "PRIVMSG" && m.To == "#go-nuts" && m.From != "hellabot"
-	},
-	func(irc *hbot.Bot, mes *hbot.Message) bool {
-		ch, ok := irc.Channels[mes.To]
-		if !ok {
-			fmt.Println("Error: Channel not registered.")
-			return false
-		}
-		ch.Counts[mes.From]++
-
-		// Save on every message: YOLO
-		irc.Channels[mes.To].SaveStats(mes.To[1:] + ".stats")
-		return false
 	},
 }
