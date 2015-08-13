@@ -44,7 +44,7 @@ func (irc *Bot) StartUnixListener() {
 }
 
 // Attempt to hijack session previously running bot
-func (irc *Bot) HijackSession() bool {
+func (irc *Bot) hijackSession() bool {
 	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr)
 	if err != nil {
 		irc.Error("could not resolve unix socket")
@@ -66,8 +66,7 @@ func (irc *Bot) HijackSession() bool {
 	if err != nil {
 		panic(err)
 	}
-
-	irc.reconnect = true
+	irc.reconnecting = true
 	irc.con = netcon
 	return true
 }

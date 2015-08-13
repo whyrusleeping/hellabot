@@ -2,11 +2,8 @@ package hbot
 
 import (
 	"bufio"
-	"encoding/json"
-	"flag"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"github.com/sorcix/irc"
@@ -18,132 +15,87 @@ import (
 	"encoding/base64"
 )
 
-const (
-	// PingTimeout is the maximum amount of time we will go without seeing any data before disconnecting
-	PingTimeout = 300 * time.Second
-)
-
 type Bot struct {
 	// Channel for user to read incoming messages
 	Incoming chan *Message
-
-	// Channels to join after connection
-	JoinAfterConnection []string
-
-	//Server password (optional) only used if set
-	Password string
-
-	// SSL
-	UseSSL bool
-
-	// Do SASL authentication
-	DoSASL bool
-
 	con      net.Conn
 	outgoing chan string
 	triggers []*Trigger
 
+	Host     string
+	Password string
+	Channels []string
+	SSL      bool
+	SASL     bool
+	// Hijacking?
+	HijackSession bool
+	// This is set if we have hijacked a connection
+	reconnecting bool
+
 	// This bots nick
-	nick string
+	Nick string
 
 	// Unix domain socket address for reconnects (linux only)
 	unixastr string
 	unixlist net.Listener
 
-	// Whether or not this is a reconnect instance
-	reconnect bool
-
 	// Duration to wait between sending of messages to avoid being
 	// kicked by the server for flooding (default 200ms)
 	ThrottleDelay time.Duration
+	PingTimeout   time.Duration
 	// Log15 loggger
 	log.Logger
 }
 
-type Config struct {
-	Server, Nick   string
-	Channels       []string
-	SSL, reconnect bool
-}
-
-// load a Json config file
-func LoadConfig(f string) (Config, error) {
-
-	file, err := os.Open(f)
-
-	if err != nil {
-		fmt.Println("Couldn't read config file")
-		return Config{}, err
-	}
-	defer file.Close()
-
-	var config Config
-	err = json.NewDecoder(file).Decode(&config)
-	if err != nil {
-		fmt.Println("Couldn't parse json file")
-		return Config{}, err
-	}
-	return config, err
-
-}
-
-// Connect to an irc server, reading configuration from json file
-func NewBotFromJSON(config Config) (*Bot, Config, error) {
-
-	fmt.Println("Nickname: " + config.Nick)
-	fmt.Println("Server: " + config.Server)
-	nick := flag.String("nick", config.Nick, "nickname for the bot")
-	serv := flag.String("server", config.Server, "hostname and port for irc server to connect to")
-	flag.Parse()
-	irc, err := NewBot(*serv, *nick, config.SSL, config.reconnect)
-	if config.Channels != nil {
-		fmt.Println("Channels to join on connect")
-		for _, s := range config.Channels {
-			fmt.Println("Channel: " + s)
-			irc.JoinAfterConnection = append(irc.JoinAfterConnection, s)
-		}
-	}
-
-	return irc, config, err
-}
-
 // Connect to an irc server
-func NewBot(host, nick string, ssl, recon bool) (*Bot, error) {
-	bot := new(Bot)
-
-	bot.Incoming = make(chan *Message, 16)
-	bot.outgoing = make(chan string, 16)
-	bot.nick = nick
-	bot.unixastr = fmt.Sprintf("@%s-%s/bot", host, nick)
-	bot.UseSSL = ssl
-	bot.ThrottleDelay = time.Millisecond * 200
-	bot.Logger = log.New("id", logext.RandId(8), "host", host, "nick", log.Lazy{bot.getNick})
-	bot.Logger.SetHandler(log.DiscardHandler())
+func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
+	// Defaults are set here
+	bot := Bot{
+		Host:          host,
+		Incoming:      make(chan *Message, 16),
+		outgoing:      make(chan string, 16),
+		Nick:          nick,
+		unixastr:      fmt.Sprintf("@%s-%s/bot", host, nick),
+		ThrottleDelay: 200 * time.Millisecond,
+		PingTimeout:   300 * time.Second,
+		HijackSession: false,
+		SSL:           false,
+		SASL:          false,
+		Channels:      []string{"#test"},
+		Password:      "",
+	}
+	for _, option := range options {
+		option(&bot)
+	}
+	// Discard logs by default
+	bot.Logger = log.New("id", logext.RandId(8), "host", bot.Host, "nick", log.Lazy{bot.getNick})
 
 	// Attempt reconnection
 	var hijack bool
-	if recon {
-		hijack = bot.HijackSession()
-		bot.Debug("Hijack", hijack)
+	if bot.HijackSession {
+		hijack = bot.hijackSession()
+		bot.Debug("Hijack", "Did we?", hijack)
 	}
 
 	if !hijack {
-		err := bot.Connect(host)
+		err := bot.Connect(bot.Host)
 		if err != nil {
 			return nil, err
 		}
 		bot.Info("Connected successfully!")
 	}
 
+	bot.Logger.SetHandler(log.DiscardHandler())
 	bot.AddTrigger(pingPong)
-	return bot, nil
+	bot.AddTrigger(joinChannels)
+	return &bot, nil
 }
 func (bot *Bot) getNick() string {
-	return bot.nick
+	return bot.Nick
 }
 func (bot *Bot) Connect(host string) (err error) {
 	bot.Debug("Connect")
-	if bot.UseSSL {
+	if bot.SSL {
 		bot.con, err = tls.Dial("tcp", host, &tls.Config{})
 	} else {
 		bot.con, err = net.Dial("tcp", host)
@@ -156,7 +108,7 @@ func (bot *Bot) handleIncomingMessages() {
 	scan := bufio.NewScanner(bot.con)
 	for scan.Scan() {
 		// Disconnect if we have seen absolutely nothing for 300 seconds
-		bot.con.SetDeadline(time.Now().Add(PingTimeout))
+		bot.con.SetDeadline(time.Now().Add(bot.PingTimeout))
 		msg := ParseMessage(scan.Text())
 		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
 		consumed := false
@@ -193,8 +145,8 @@ func (bot *Bot) handleOutgoingMessages() {
 func (bot *Bot) SASLAuthenticate(user, pass string) {
 	bot.Debug("Beginning SASL Authentication")
 	bot.Send("CAP REQ :sasl")
-	bot.SetNick(bot.nick)
-	bot.sendUserCommand(bot.nick, bot.nick, "8")
+	bot.SetNick(bot.Nick)
+	bot.sendUserCommand(bot.Nick, bot.Nick, "8")
 
 	bot.WaitFor(func(mes *Message) bool {
 		return mes.Content == "sasl" && len(mes.Params) > 1 && mes.Params[1] == "ACK"
@@ -230,8 +182,9 @@ func (bot *Bot) StandardRegistration() {
 	if bot.Password != "" {
 		bot.Send("PASS " + bot.Password)
 	}
-	bot.sendUserCommand(bot.nick, bot.nick, "8")
-	bot.SetNick(bot.nick)
+	bot.Debug("Sending standard registration")
+	bot.sendUserCommand(bot.Nick, bot.Nick, "8")
+	bot.SetNick(bot.Nick)
 }
 
 // Set username, real name, and mode
@@ -240,7 +193,7 @@ func (bot *Bot) sendUserCommand(user, realname, mode string) {
 }
 
 func (bot *Bot) SetNick(nick string) {
-	bot.nick = nick
+	bot.Nick = nick
 	bot.Send(fmt.Sprintf("NICK %s", nick))
 }
 
@@ -254,16 +207,12 @@ func (bot *Bot) Start() {
 	go bot.StartUnixListener()
 
 	// Only register on an initial connection
-	if !bot.reconnect {
-		if bot.DoSASL {
-			bot.SASLAuthenticate(bot.nick, bot.Password)
+	if !bot.reconnecting {
+		if bot.SASL {
+			bot.SASLAuthenticate(bot.Nick, bot.Password)
 		} else {
 			bot.StandardRegistration()
 		}
-	}
-
-	for _, s := range bot.JoinAfterConnection {
-		bot.Join(s)
 	}
 }
 
@@ -357,6 +306,17 @@ var pingPong = &Trigger{
 	},
 	func(bot *Bot, m *Message) bool {
 		bot.Send("PONG :" + m.Content)
+		return true
+	},
+}
+var joinChannels = &Trigger{
+	func(m *Message) bool {
+		return m.Command == irc.RPL_WELCOME // || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
+	},
+	func(bot *Bot, m *Message) bool {
+		for _, channel := range bot.Channels {
+			bot.Send(fmt.Sprintf("JOIN %s", channel))
+		}
 		return true
 	},
 }
