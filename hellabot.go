@@ -32,6 +32,8 @@ type Bot struct {
 	// This is set if we have hijacked a connection
 	reconnecting bool
 
+	// When did we start? Used for uptime
+	started time.Time
 	// This bots nick
 	Nick string
 
@@ -67,6 +69,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		SASL:          false,
 		Channels:      []string{"#test"},
 		Password:      "",
+		started:       time.Now(),
 	}
 	for _, option := range options {
 		option(&bot)
@@ -93,6 +96,11 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	bot.AddTrigger(pingPong)
 	bot.AddTrigger(joinChannels)
 	return &bot, nil
+}
+
+// Getter for uptime, so it's not possible to modify from the outside.
+func (bot *Bot) Uptime() string {
+	return fmt.Sprintf("Started: %s, Uptime: %s", bot.started, time.Since(bot.started))
 }
 func (bot *Bot) getNick() string {
 	return bot.Nick
