@@ -2,11 +2,12 @@ package hbot
 
 import (
 	"fmt"
-	"github.com/mudler/sendfd"
 	"net"
+
+	"github.com/mudler/sendfd"
 )
 
-func (irc *IrcCon) StartUnixListener() {
+func (irc *Bot) StartUnixListener() {
 	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr)
 	if err != nil {
 		panic(err)
@@ -43,17 +44,16 @@ func (irc *IrcCon) StartUnixListener() {
 }
 
 // Attempt to hijack session previously running bot
-func (irc *IrcCon) HijackSession() bool {
+func (irc *Bot) hijackSession() bool {
 	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr)
 	if err != nil {
-		irc.Log(LWarning, "could not resolve unix socket")
+		irc.Error("could not resolve unix socket")
 		return false
 	}
 
 	con, err := net.DialUnix("unix", nil, unaddr)
 	if err != nil {
-		fmt.Println("Couldnt restablish connection, no prior bot.")
-		fmt.Println(err)
+		irc.Error("Couldnt restablish connection, no prior bot:", err)
 		return false
 	}
 
@@ -66,8 +66,7 @@ func (irc *IrcCon) HijackSession() bool {
 	if err != nil {
 		panic(err)
 	}
-
-	irc.reconnect = true
+	irc.reconnecting = true
 	irc.con = netcon
 	return true
 }
