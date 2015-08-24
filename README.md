@@ -2,7 +2,7 @@
 
 One hella-awesome irc bot. Hellabot is an easily hackable event based irc bot
 framework with the ability to be updated without losing connection to the
-server. To respond to an event, simple create a "Trigger" struct containing
+server. To respond to an event, simply create a "Trigger" struct containing
 two functions, one for the condition, and one for the action.
 
 ###Example Trigger
@@ -31,8 +31,8 @@ mybot.Start()
 ```
 
 The 'To' field on the message object in triggers will refer to the channel that
-a given message is in, unless it is a server message or a user to user private
-message, In which case it will be the target users name.
+a given message is in, unless it is a server message, or a user to user private
+message, in which case it will be the target user's name.
 
 For more example triggers, check the examples directory.
 
@@ -66,7 +66,7 @@ for mes := range mybot.Incoming {
 
 ### The Message struct
 
-The message struct is the primary struct you will be dealing with when building
+The message struct is primarily what you will be dealing with when building
 triggers or reading off the Incoming channel.
 
 ```go
@@ -111,12 +111,12 @@ type Prefix struct {
 ### Connection Passing
 
 Hellabot is able to restart without dropping its connection to the server
-(on linux machines) by passing the tcp connection through a unix domain socket.
+(on Linux machines) by passing the TCP connection through a UNIX domain socket.
 This allows you to update triggers and other addons without actually logging
-your bot out of irc, avoiding the loss of op status and spamming the channel
+your bot out of the IRC, avoiding the loss of op status and spamming the channel
 with constant join/part messages. To do this, simply run the program again with
 the same nick and without killing the first program (different nicks wont reuse
-the same bot instance), the first program will shutdown cleanly and the new one
+the same bot instance). The first program will shutdown cleanly, and the new one
 will take over.
 
 ### Security
@@ -147,9 +147,9 @@ the Password field of the IrcCon struct before calling its Start method.
 
 ### Debugging
 
-The hbot package has a global variable called Verbosity, it controls
-hellabots internal logging levels. There are six levels of logging at the time
-of writing, not all are currently used.
+The hbot package has a global variable called Verbosity. It controls
+hellabot's internal logging levels. There are six levels of logging at the time
+of this writing, but not all are currently used.
 
 ```go
 // For error conditions
@@ -171,13 +171,13 @@ LNoise
 ### Why?
 
 What do you need an IRC bot for you ask? Why, I've gone through the trouble of
-compiling a list of fun things for you! (Some of these are what hellabot is
-currently being used for)
+compiling a list of fun things for you! Some of these are what hellabot is
+currently being used for:
 
 - AutoOp Bot: ops you when you join the channel
 - Stats counting bot: counts how often people talk in a channel
-- Mock users you dont like by repeating what they say
-- Fire a usb dart launcher on a given command
+- Mock users you don't like by repeating what they say
+- Fire a USB dart launcher on a given command
 - Control an MPD radio stream based on chat commands
 - Award praise to people for guessing a random number
 - Scrape news sites for relevant articles and send them to a channel
