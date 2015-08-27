@@ -1,9 +1,8 @@
 package hbot
 
-func (irc *IrcCon) StartUnixListener() { }
+func (irc *Bot) StartUnixListener() {}
 
 // Attempt to hijack session previously running bot
-func (irc *IrcCon) HijackSession() bool {
+func (irc *Bot) HijackSession() bool {
 	return false
 }
-

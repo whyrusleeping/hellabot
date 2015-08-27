@@ -4,29 +4,38 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/whyrusleeping/hellabot"
+
+	hbot "github.com/JReyLBC/hellabot"
+	log "gopkg.in/inconshreveable/log15.v2"
 )
 
+var serv = flag.String("server", "irc.coldfront.net:6667", "hostname and port for irc server to connect to")
+var nick = flag.String("nick", "hellabot", "nickname for the bot")
+
 func main() {
-	nick := flag.String("nick", "hellabot", "nickname for the bot")
-	serv := flag.String("server", "irc:6667", "hostname and port for irc server to connect to")
-	ichan := flag.String("chan", "#go-nuts", "channel for bot to join")
 	flag.Parse()
 
-	irc, err := hbot.NewIrcConnection(*serv, *nick, false, false)
+	hijackSession := func(bot *hbot.Bot) {
+		bot.HijackSession = true
+	}
+	channels := func(bot *hbot.Bot) {
+		bot.Channels = []string{"#test"}
+	}
+	irc, err := hbot.NewBot(*serv, *nick, hijackSession, channels)
 	if err != nil {
 		panic(err)
 	}
 
-	// Say a message from a file when prompted
-	irc.AddTrigger(SayInfoMessage)
+	irc.AddTrigger(sayInfoMessage)
+	irc.Logger.SetHandler(log.StdoutHandler)
+	// logHandler := log.LvlFilterHandler(log.LvlInfo, log.StdoutHandler)
+	// or
+	// irc.Logger.SetHandler(logHandler)
+	// or
+	// irc.Logger.SetHandler(log.StreamHandler(os.Stdout, log.JsonFormat()))
 
 	// Start up bot
 	irc.Start()
-
-	// Join a channel
-	mychannel := irc.Join(*ichan)
-	mychannel.Say("Hey")
 
 	// Read off messages from the server
 	for mes := range irc.Incoming {
@@ -35,7 +44,21 @@ func main() {
 			return
 		}
 		// Log raw message struct
-		fmt.Println(mes)
+		//fmt.Println(mes)
 	}
 	fmt.Println("Bot shutting down.")
 }
+
+type SayInfoMessage struct{}
+
+func (sim *SayInfoMessage) Action(bot *hbot.Bot, m *hbot.Message) bool {
+	return m.Command == "PRIVMSG" && m.Content == "-info"
+}
+
+func (sim *SayInfoMessage) Condition(irc *hbot.Bot, mes *hbot.Message) bool {
+	irc.Msg(mes.To, "Hello")
+	return false
+}
+
+// This trigger replies Hello when you say hello
+var sayInfoMessage = &SayInfoMessage{}
