@@ -2,6 +2,9 @@ package hbot
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"time"
@@ -9,10 +12,6 @@ import (
 	"github.com/sorcix/irc"
 	log "gopkg.in/inconshreveable/log15.v2"
 	logext "gopkg.in/inconshreveable/log15.v2/ext"
-
-	"bytes"
-	"crypto/tls"
-	"encoding/base64"
 )
 
 type Bot struct {
@@ -20,7 +19,7 @@ type Bot struct {
 	Incoming chan *Message
 	con      net.Conn
 	outgoing chan string
-	triggers []*Trigger
+	triggers []Trigger
 
 	Host     string
 	Password string
@@ -294,44 +293,52 @@ func (bot *Bot) Close() error {
 	return nil
 }
 
-func (bot *Bot) AddTrigger(t *Trigger) {
+func (bot *Bot) AddTrigger(t Trigger) {
 	bot.triggers = append(bot.triggers, t)
 }
 
 // A trigger is used to subscribe and react to events on the bot Server
-type Trigger struct {
+type Trigger interface {
 	// Returns true if this trigger applies to the passed in message
-	Condition func(*Bot, *Message) bool
+	Condition(*Bot, *Message) bool
 
 	// The action to perform if Condition is true
 	// return true if the message was 'consumed'
-	Action func(*Bot, *Message) bool
+	Action(*Bot, *Message) bool
 }
 
 // A trigger to respond to the servers ping pong messages
 // If PingPong messages are not responded to, the server assumes the
 // client has timed out and will close the connection.
 // Note: this is automatically added in the IrcCon constructor
-var pingPong = &Trigger{
-	func(bot *Bot, m *Message) bool {
-		return m.Command == "PING"
-	},
-	func(bot *Bot, m *Message) bool {
-		bot.Send("PONG :" + m.Content)
-		return true
-	},
+
+type PingPong struct{}
+
+func (pp PingPong) Condition(bot *Bot, m *Message) bool {
+	return m.Command == "PING"
 }
-var joinChannels = &Trigger{
-	func(bot *Bot, m *Message) bool {
-		return m.Command == irc.RPL_WELCOME // || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
-	},
-	func(bot *Bot, m *Message) bool {
-		for _, channel := range bot.Channels {
-			bot.Send(fmt.Sprintf("JOIN %s", channel))
-		}
-		return true
-	},
+
+func (pp PingPong) Action(bot *Bot, m *Message) bool {
+	bot.Send("PONG :" + m.Content)
+	return true
 }
+
+var pingPong = &PingPong{}
+
+type JoinChannels struct{}
+
+func (jc *JoinChannels) Condition(bot *Bot, m *Message) bool {
+	return m.Command == irc.RPL_WELCOME // || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
+}
+
+func (jc *JoinChannels) Action(bot *Bot, m *Message) bool {
+	for _, channel := range bot.Channels {
+		bot.Send(fmt.Sprintf("JOIN %s", channel))
+	}
+	return true
+}
+
+var joinChannels = &JoinChannels{}
 
 type Message struct {
 	// irc.Message from sorcix

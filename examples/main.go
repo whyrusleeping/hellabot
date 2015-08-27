@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/whyrusleeping/hellabot"
+	hbot "github.com/JReyLBC/hellabot"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
 
@@ -26,7 +26,7 @@ func main() {
 		panic(err)
 	}
 
-	irc.AddTrigger(SayInfoMessage)
+	irc.AddTrigger(sayInfoMessage)
 	irc.Logger.SetHandler(log.StdoutHandler)
 	// logHandler := log.LvlFilterHandler(log.LvlInfo, log.StdoutHandler)
 	// or
@@ -49,13 +49,16 @@ func main() {
 	fmt.Println("Bot shutting down.")
 }
 
-// This trigger replies Hello when you say hello
-var SayInfoMessage = &hbot.Trigger{
-	func(m *hbot.Message) bool {
-		return m.Command == "PRIVMSG" && m.Content == "-info"
-	},
-	func(irc *hbot.Bot, mes *hbot.Message) bool {
-		irc.Msg(mes.To, "Hello")
-		return false
-	},
+type SayInfoMessage struct{}
+
+func (sim *SayInfoMessage) Action(bot *hbot.Bot, m *hbot.Message) bool {
+	return m.Command == "PRIVMSG" && m.Content == "-info"
 }
+
+func (sim *SayInfoMessage) Condition(irc *hbot.Bot, mes *hbot.Message) bool {
+	irc.Msg(mes.To, "Hello")
+	return false
+}
+
+// This trigger replies Hello when you say hello
+var sayInfoMessage = &SayInfoMessage{}
