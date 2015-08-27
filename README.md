@@ -2,21 +2,39 @@
 
 One hella-awesome irc bot. Hellabot is an easily hackable event based irc bot
 framework with the ability to be updated without losing connection to the
-server. To respond to an event, simply create a "Trigger" struct containing
-two functions, one for the condition, and one for the action.
+server. To respond to an event, simply implement the "Trigger" interface which
+contains two functions: one for the condition, and one for the action.
+
+```go
+// A trigger is used to subscribe and react to events on the bot Server
+type Trigger interface {
+	// Returns true if this trigger applies to the passed in message
+	Condition(*Bot, *Message) bool
+
+	// The action to perform if Condition is true
+	// return true if the message was 'consumed'
+	Action(*Bot, *Message) bool
+}
+```
+
 
 ###Example Trigger
 
 ```go
-var MyTrigger = &hbot.Trigger{
-	func (mes *Message) bool {
-		return mes.From == "whyrusleeping"
-	},
-	func (irc *hbot.Bot, mes *hbot.Message) bool {
-		irc.Msg(mes.To, "whyrusleeping said something")
-		return false
-	},
+
+type struct ISaidSomething{}
+
+func (iss *ISaidSomething) Condition(irc *hbot.Bot, mes *hbot.Message) bool {
+	return mes.From == "whyrusleeping"
 }
+
+func (iss *ISaidSomething) Action(irc *hbot.Bot, mes *hbot.Message) bool {
+	irc.Msg(mes.To, "whyrusleeping said something")
+	return false
+}
+
+
+var MyTrigger = &ISaidSomething{}
 ```
 
 This trigger makes the bot announce to everyone that I said something
@@ -44,14 +62,18 @@ messages off of Incoming, or simply add a trigger that does nothing but consume
 all messages and make sure it is the last trigger added.
 
 ```go
-var EatEverything = &hbot.Trigger{
-	func (mes *hbot.Message) bool {
-		return true
-	},
-	func (irc *hbot.Bot, mes *hbot.Message) bool {
-		return true
-	},
+
+type EatEverything struct {}
+
+func (ee *EatEverything) Condition(irc *hbot.Bot, mes *hbot.Message) bool {
+	return true
 }
+
+func (ee *EatEverything) Action(irc *hbot.Bot, mes *hbot.Message) bool {
+	return true
+}
+
+var eatEverything = &EatEverything{}
 
 mybot.AddTrigger(EatEverything)
 ```
@@ -112,7 +134,7 @@ type Prefix struct {
 
 Hellabot is able to restart without dropping its connection to the server
 (on Linux machines) by passing the TCP connection through a UNIX domain socket.
-This allows you to update triggers and other addons without actually logging
+This allows you to update triggers and other add-ons without actually logging
 your bot out of the IRC, avoiding the loss of op status and spamming the channel
 with constant join/part messages. To do this, simply run the program again with
 the same nick and without killing the first program (different nicks wont reuse
