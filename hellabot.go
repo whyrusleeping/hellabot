@@ -16,37 +16,36 @@ import (
 )
 
 type Bot struct {
+
+	// This is set if we have hijacked a connection
+	reconnecting bool
 	// Channel for user to read incoming messages
 	Incoming chan *Message
 	con      net.Conn
 	outgoing chan string
-	triggers []*Trigger
-
-	Host     string
-	Password string
-	Channels []string
-	SSL      bool
-	SASL     bool
-	// Hijacking?
-	HijackSession bool
-	// This is set if we have hijacked a connection
-	reconnecting bool
-
+	triggers []Trigger
 	// When did we start? Used for uptime
 	started time.Time
-	// This bots nick
-	Nick string
-
 	// Unix domain socket address for reconnects (linux only)
 	unixastr string
 	unixlist net.Listener
+	// Log15 loggger
+	log.Logger
 
+	// Exported fields
+	Host          string
+	Password      string
+	Channels      []string
+	SSL           bool
+	SASL          bool
+	HijackSession bool
+	// This bots nick
+	Nick string
 	// Duration to wait between sending of messages to avoid being
 	// kicked by the server for flooding (default 200ms)
 	ThrottleDelay time.Duration
-	PingTimeout   time.Duration
-	// Log15 loggger
-	log.Logger
+	// Maxmimum time between incoming data
+	PingTimeout time.Duration
 }
 
 func (bot *Bot) String() string {
@@ -57,11 +56,12 @@ func (bot *Bot) String() string {
 func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	// Defaults are set here
 	bot := Bot{
-		Host:          host,
 		Incoming:      make(chan *Message, 16),
 		outgoing:      make(chan string, 16),
-		Nick:          nick,
+		started:       time.Now(),
 		unixastr:      fmt.Sprintf("@%s-%s/bot", host, nick),
+		Host:          host,
+		Nick:          nick,
 		ThrottleDelay: 200 * time.Millisecond,
 		PingTimeout:   300 * time.Second,
 		HijackSession: false,
@@ -69,7 +69,6 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		SASL:          false,
 		Channels:      []string{"#test"},
 		Password:      "",
-		started:       time.Now(),
 	}
 	for _, option := range options {
 		option(&bot)
