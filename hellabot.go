@@ -296,7 +296,7 @@ func (bot *Bot) Close() error {
 	return nil
 }
 
-func (bot *Bot) AddTrigger(t *Trigger) {
+func (bot *Bot) AddTrigger(t Trigger) {
 	bot.triggers = append(bot.triggers, t)
 }
 
@@ -314,7 +314,7 @@ type Trigger struct {
 // If PingPong messages are not responded to, the server assumes the
 // client has timed out and will close the connection.
 // Note: this is automatically added in the IrcCon constructor
-var pingPong = &Trigger{
+var pingPong = Trigger{
 	func(bot *Bot, m *Message) bool {
 		return m.Command == "PING"
 	},
@@ -323,7 +323,7 @@ var pingPong = &Trigger{
 		return true
 	},
 }
-var joinChannels = &Trigger{
+var joinChannels = Trigger{
 	func(bot *Bot, m *Message) bool {
 		return m.Command == irc.RPL_WELCOME // || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
 	},
