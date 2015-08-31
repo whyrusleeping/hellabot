@@ -234,10 +234,6 @@ func (bot *Bot) Start() {
 
 // Send a message to 'who' (user or channel)
 func (bot *Bot) Msg(who, text string) {
-	// if len(text) == 0, return instead of trying to send a empty message
-	if len(text) == 0 {
-		return
-	}
 	for len(text) > 400 {
 		bot.Send("PRIVMSG " + who + " :" + text[:400])
 		text = text[400:]
@@ -247,10 +243,6 @@ func (bot *Bot) Msg(who, text string) {
 
 // Notice sends a NOTICE message to 'who' (user or channel)
 func (bot *Bot) Notice(who, text string) {
-	// if len(text) == 0, return instead of trying to send a empty notice
-	if len(text) == 0 {
-		return
-	}
 	for len(text) > 400 {
 		bot.Send("NOTICE " + who + " :" + text[:400])
 		text = text[400:]
@@ -260,10 +252,6 @@ func (bot *Bot) Notice(who, text string) {
 
 // Send a action to 'who' (user or channel)
 func (bot *Bot) Action(who, text string) {
-	// if len(text) == 0, return instead of trying to send a empty action
-	if len(text) == 0 {
-		return
-	}
 	msg := fmt.Sprintf("\u0001ACTION %s\u0001", text)
 	bot.Msg(who, msg)
 }
