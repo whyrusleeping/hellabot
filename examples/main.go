@@ -43,14 +43,12 @@ func main() {
 			fmt.Println("Disconnected.")
 			return
 		}
-		// Log raw message struct
-		//fmt.Println(mes)
 	}
 	fmt.Println("Bot shutting down.")
 }
 
 // This trigger replies Hello when you say hello
-var SayInfoMessage = &hbot.Trigger{
+var SayInfoMessage = hbot.Trigger{
 	func(m *hbot.Message) bool {
 		return m.Command == "PRIVMSG" && m.Content == "-info"
 	},

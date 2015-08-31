@@ -11,7 +11,7 @@ import (
 
 // This trigger will op people in the given list who ask by saying "-opme"
 var oplist = []string{"whyrusleeping", "tlane", "ltorvalds"}
-var OpPeople = &hbot.Trigger{
+var OpPeople = hbot.Trigger{
 	func(bot *hbot.Bot, mes *hbot.Message) bool {
 		if mes.Content == "-opme" {
 			for _, s := range oplist {
@@ -29,7 +29,7 @@ var OpPeople = &hbot.Trigger{
 }
 
 // This trigger will say the contents of the file "info" when prompted
-var SayInfoMessage = &hbot.Trigger{
+var SayInfoMessage = hbot.Trigger{
 	func(bot *hbot.Bot, mes *hbot.Message) bool {
 		return m.Command == "PRIVMSG" && m.Content == "-info"
 	},
@@ -48,7 +48,7 @@ var SayInfoMessage = &hbot.Trigger{
 // This trigger will listen for -toggle, -next and -prev and then
 // perform the mpc action of the same name to control an mpd server running
 // on localhost
-var Mpc = &hbot.Trigger{
+var Mpc = hbot.Trigger{
 	func(bot *hbot.Bot, mes *hbot.Message) bool {
 		return m.Command == "PRIVMSG" && (m.Content == "-toggle" || m.Content == "-next" || m.Content == "-prev")
 	},
