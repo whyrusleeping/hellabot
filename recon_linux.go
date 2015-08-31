@@ -48,7 +48,7 @@ func (irc *Bot) hijackSession() bool {
 	unaddr, _ := net.ResolveUnixAddr("unix", irc.unixastr) // The only way to get an error here is if the first parameter is not one of "unix", "unixgram" or "unixpacket". That will never happen.
 	con, err := net.DialUnix("unix", nil, unaddr)
 	if err != nil {
-		irc.Error("Couldnt restablish connection, no prior bot:", err)
+		irc.Info("Couldnt restablish connection, no prior bot.", "err", err)
 		return false
 	}
 	ncon, err := sendfd.RecvFD(con)
