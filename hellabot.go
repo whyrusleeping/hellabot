@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/sorcix/irc"
@@ -31,6 +32,7 @@ type Bot struct {
 	unixlist net.Listener
 	// Log15 loggger
 	log.Logger
+	didJoinChannels sync.Once
 
 	// Exported fields
 	Host          string
@@ -325,12 +327,14 @@ var pingPong = Trigger{
 }
 var joinChannels = Trigger{
 	func(bot *Bot, m *Message) bool {
-		return m.Command == irc.RPL_WELCOME // || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
+		return m.Command == irc.RPL_WELCOME || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
 	},
 	func(bot *Bot, m *Message) bool {
-		for _, channel := range bot.Channels {
-			bot.Send(fmt.Sprintf("JOIN %s", channel))
-		}
+		bot.didJoinChannels.Do(func() {
+			for _, channel := range bot.Channels {
+				bot.Send(fmt.Sprintf("JOIN %s", channel))
+			}
+		})
 		return true
 	},
 }
