@@ -79,6 +79,9 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	// Attempt reconnection
 	var hijack bool
 	if bot.HijackSession {
+		if bot.SSL {
+			bot.Crit("Can't Hijack a SSL connection")
+		}
 		hijack = bot.hijackSession()
 		bot.Debug("Hijack", "Did we?", hijack)
 	}
