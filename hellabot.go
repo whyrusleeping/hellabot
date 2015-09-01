@@ -78,24 +78,6 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	// Discard logs by default
 	bot.Logger = log.New("id", logext.RandId(8), "host", bot.Host, "nick", log.Lazy{bot.getNick})
 
-	// Attempt reconnection
-	var hijack bool
-	if bot.HijackSession {
-		if bot.SSL {
-			bot.Crit("Can't Hijack a SSL connection")
-		}
-		hijack = bot.hijackSession()
-		bot.Debug("Hijack", "Did we?", hijack)
-	}
-
-	if !hijack {
-		err := bot.Connect(bot.Host)
-		if err != nil {
-			return nil, err
-		}
-		bot.Info("Connected successfully!")
-	}
-
 	bot.Logger.SetHandler(log.DiscardHandler())
 	bot.AddTrigger(pingPong)
 	bot.AddTrigger(joinChannels)
@@ -215,7 +197,25 @@ func (bot *Bot) SetNick(nick string) {
 
 // Start up servers various running methods
 func (bot *Bot) Start() {
-	bot.Debug("Start bot processes.")
+	bot.Debug("Starting bot goroutines")
+
+	// Attempt reconnection
+	var hijack bool
+	if bot.HijackSession {
+		if bot.SSL {
+			bot.Crit("Can't Hijack a SSL connection")
+		}
+		hijack = bot.hijackSession()
+		bot.Debug("Hijack", "Did we?", hijack)
+	}
+
+	if !hijack {
+		err := bot.Connect(bot.Host)
+		if err != nil {
+			bot.Error(err.Error())
+		}
+		bot.Info("Connected successfully!")
+	}
 
 	go bot.handleIncomingMessages()
 	go bot.handleOutgoingMessages()
