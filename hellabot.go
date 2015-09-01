@@ -54,7 +54,7 @@ func (bot *Bot) String() string {
 	return fmt.Sprintf("Server: %s, Channels: %v, Nick: %s", bot.Host, bot.Channels, bot.Nick)
 }
 
-// Connect to an irc server
+// NewBot creates a new instance of Bot
 func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	// Defaults are set here
 	bot := Bot{
@@ -91,8 +91,8 @@ func (bot *Bot) Uptime() string {
 func (bot *Bot) getNick() string {
 	return bot.Nick
 }
-func (bot *Bot) Connect(host string) (err error) {
-	bot.Debug("Connect")
+func (bot *Bot) connect(host string) (err error) {
+	bot.Debug("Connecting")
 	if bot.SSL {
 		bot.con, err = tls.Dial("tcp", host, &tls.Config{})
 	} else {
@@ -210,7 +210,7 @@ func (bot *Bot) Start() {
 	}
 
 	if !hijack {
-		err := bot.Connect(bot.Host)
+		err := bot.connect(bot.Host)
 		if err != nil {
 			bot.Error(err.Error())
 		}
