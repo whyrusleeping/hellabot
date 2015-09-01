@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/whyrusleeping/hellabot"
+	"github.com/flexd/hellabot"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
 
@@ -41,7 +41,7 @@ func main() {
 
 // This trigger replies Hello when you say hello
 var SayInfoMessage = hbot.Trigger{
-	func(m *hbot.Message) bool {
+	func(bot *hbot.Bot, m *hbot.Message) bool {
 		return m.Command == "PRIVMSG" && m.Content == "-info"
 	},
 	func(irc *hbot.Bot, mes *hbot.Message) bool {
