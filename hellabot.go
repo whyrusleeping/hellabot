@@ -195,8 +195,8 @@ func (bot *Bot) SetNick(nick string) {
 	bot.Send(fmt.Sprintf("NICK %s", nick))
 }
 
-// Start up servers various running methods
-func (bot *Bot) Start() {
+// Run starts the bot and connects to the server. Blocks until we disconnect from the server.
+func (bot *Bot) Run() {
 	bot.Debug("Starting bot goroutines")
 
 	// Attempt reconnection
