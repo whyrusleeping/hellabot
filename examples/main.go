@@ -34,16 +34,8 @@ func main() {
 	// or
 	// irc.Logger.SetHandler(log.StreamHandler(os.Stdout, log.JsonFormat()))
 
-	// Start up bot
-	irc.Start()
-
-	// Read off messages from the server
-	for mes := range irc.Incoming {
-		if mes == nil {
-			fmt.Println("Disconnected.")
-			return
-		}
-	}
+	// Start up bot (this blocks until we disconnect)
+	irc.Run()
 	fmt.Println("Bot shutting down.")
 }
 
