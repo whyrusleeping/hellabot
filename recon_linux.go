@@ -45,7 +45,10 @@ func (irc *Bot) StartUnixListener() {
 
 // Attempt to hijack session previously running bot
 func (irc *Bot) hijackSession() bool {
-	unaddr, _ := net.ResolveUnixAddr("unix", irc.unixastr) // The only way to get an error here is if the first parameter is not one of "unix", "unixgram" or "unixpacket". That will never happen.
+	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr) // The only way to get an error here is if the first parameter is not one of "unix", "unixgram" or "unixpacket". That will never happen.
+	if err != nil {
+		panic(err)
+	}
 	con, err := net.DialUnix("unix", nil, unaddr)
 	if err != nil {
 		irc.Info("Couldnt restablish connection, no prior bot.", "err", err)
