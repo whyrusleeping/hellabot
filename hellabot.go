@@ -230,6 +230,12 @@ func (bot *Bot) Start() {
 			bot.StandardRegistration()
 		}
 	}
+	for m := range bot.Incoming {
+		if m == nil {
+			log.Info("Disconnected")
+			return
+		}
+	}
 }
 
 // Send a message to 'who' (user or channel)
