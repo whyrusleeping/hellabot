@@ -16,6 +16,7 @@ import (
 	"encoding/base64"
 )
 
+// Bot implements an irc bot to be connected to a given server
 type Bot struct {
 
 	// This is set if we have hijacked a connection
@@ -84,13 +85,15 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	return &bot, nil
 }
 
-// Getter for uptime, so it's not possible to modify from the outside.
+// Uptime returns the uptime of the bot
 func (bot *Bot) Uptime() string {
 	return fmt.Sprintf("Started: %s, Uptime: %s", bot.started, time.Since(bot.started))
 }
+
 func (bot *Bot) getNick() string {
 	return bot.Nick
 }
+
 func (bot *Bot) connect(host string) (err error) {
 	bot.Debug("Connecting")
 	if bot.SSL {
@@ -138,7 +141,7 @@ func (bot *Bot) handleOutgoingMessages() {
 	}
 }
 
-// Perform SASL authentication
+// SASLAuthenticate performs SASL authentication
 // ref: https://github.com/atheme/charybdis/blob/master/doc/sasl.txt
 func (bot *Bot) SASLAuthenticate(user, pass string) {
 	bot.Debug("Beginning SASL Authentication")
@@ -165,6 +168,7 @@ func (bot *Bot) SASLAuthenticate(user, pass string) {
 	bot.Send("CAP END")
 }
 
+// WaitFor will block until a message matching the given filter is received
 func (bot *Bot) WaitFor(filter func(*Message) bool) {
 	for mes := range bot.Incoming {
 		if filter(mes) {
@@ -174,7 +178,7 @@ func (bot *Bot) WaitFor(filter func(*Message) bool) {
 	return
 }
 
-// A basic set of registration commands
+// StandardRegistration performsa a basic set of registration commands
 func (bot *Bot) StandardRegistration() {
 	//Server registration
 	if bot.Password != "" {
@@ -190,6 +194,7 @@ func (bot *Bot) sendUserCommand(user, realname, mode string) {
 	bot.Send(fmt.Sprintf("USER %s %s * :%s", user, mode, realname))
 }
 
+// SetNick sets the bots nick on the irc server
 func (bot *Bot) SetNick(nick string) {
 	bot.Nick = nick
 	bot.Send(fmt.Sprintf("NICK %s", nick))
@@ -238,7 +243,7 @@ func (bot *Bot) Run() {
 	}
 }
 
-// Send a message to 'who' (user or channel)
+// Msg sends a message to 'who' (user or channel)
 func (bot *Bot) Msg(who, text string) {
 	for len(text) > 400 {
 		bot.Send("PRIVMSG " + who + " :" + text[:400])
@@ -256,13 +261,13 @@ func (bot *Bot) Notice(who, text string) {
 	bot.Send("NOTICE " + who + " :" + text)
 }
 
-// Send a action to 'who' (user or channel)
+// Action sends an action to 'who' (user or channel)
 func (bot *Bot) Action(who, text string) {
 	msg := fmt.Sprintf("\u0001ACTION %s\u0001", text)
 	bot.Msg(who, msg)
 }
 
-// Sets the channel 'c' topic (requires bot has proper permissions)
+// Topic sets the channel 'c' topic (requires bot has proper permissions)
 func (bot *Bot) Topic(c, topic string) {
 	str := fmt.Sprintf("TOPIC %s :%s", c, topic)
 	bot.Send(str)
@@ -273,7 +278,7 @@ func (bot *Bot) Send(command string) {
 	bot.outgoing <- command
 }
 
-// Used to change users modes in a channel
+// ChMode is used to change users modes in a channel
 // operator = "+o" deop = "-o"
 // ban = "+b"
 func (bot *Bot) ChMode(user, channel, mode string) {
@@ -285,6 +290,7 @@ func (bot *Bot) Join(ch string) {
 	bot.Send("JOIN " + ch)
 }
 
+// Close closes the bot
 func (bot *Bot) Close() error {
 	if bot.unixlist != nil {
 		return bot.unixlist.Close()
@@ -292,11 +298,12 @@ func (bot *Bot) Close() error {
 	return nil
 }
 
+// AddTrigger adds a given trigger to the bots handlers
 func (bot *Bot) AddTrigger(t Trigger) {
 	bot.triggers = append(bot.triggers, t)
 }
 
-// A trigger is used to subscribe and react to events on the bot Server
+// Trigger is used to subscribe and react to events on the bot Server
 type Trigger struct {
 	// Returns true if this trigger applies to the passed in message
 	Condition func(*Bot, *Message) bool
@@ -333,6 +340,7 @@ var joinChannels = Trigger{
 	},
 }
 
+// Message represents a message received from the server
 type Message struct {
 	// irc.Message from sorcix
 	*irc.Message

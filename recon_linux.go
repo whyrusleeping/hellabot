@@ -7,6 +7,8 @@ import (
 	"github.com/mudler/sendfd"
 )
 
+// StartUnixListener starts up a unix domain socket listener for reconnects to
+// be sent through
 func (irc *Bot) StartUnixListener() {
 	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr)
 	if err != nil {
