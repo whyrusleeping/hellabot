@@ -128,7 +128,7 @@ func (bot *Bot) handleOutgoingMessages() {
 		bot.Debug("Outgoing", "data", s)
 		_, err := fmt.Fprint(bot.con, s+"\r\n")
 		if err != nil {
-			bot.Error("write error: ", err)
+			bot.Error("handleOutgoingMessages fmt.Fprint error", "err", err)
 			return
 		}
 		time.Sleep(bot.ThrottleDelay)
@@ -211,7 +211,7 @@ func (bot *Bot) Run() {
 	if !hijack {
 		err := bot.connect(bot.Host)
 		if err != nil {
-			bot.Error(err.Error())
+			bot.Error("bot.Connect error", "err", err.Error())
 		}
 		bot.Info("Connected successfully!")
 	}
