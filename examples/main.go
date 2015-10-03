@@ -4,8 +4,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"time"
 
-	"github.com/flexd/hellabot"
+	"github.com/whyrusleeping/hellabot"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
 
@@ -27,6 +28,7 @@ func main() {
 	}
 
 	irc.AddTrigger(SayInfoMessage)
+	irc.AddTrigger(LongTrigger)
 	irc.Logger.SetHandler(log.StdoutHandler)
 	// logHandler := log.LvlFilterHandler(log.LvlInfo, log.StdoutHandler)
 	// or
@@ -46,6 +48,20 @@ var SayInfoMessage = hbot.Trigger{
 	},
 	func(irc *hbot.Bot, mes *hbot.Message) bool {
 		irc.Msg(mes.To, "Hello")
+		return false
+	},
+}
+
+// This trigger replies Hello when you say hello
+var LongTrigger = hbot.Trigger{
+	func(bot *hbot.Bot, m *hbot.Message) bool {
+		return m.Command == "PRIVMSG" && m.Content == "-long"
+	},
+	func(irc *hbot.Bot, mes *hbot.Message) bool {
+		irc.Msg(mes.To, "This is the first message")
+		time.Sleep(5 * time.Second)
+		irc.Msg(mes.To, "This is the second message")
+
 		return false
 	},
 }
