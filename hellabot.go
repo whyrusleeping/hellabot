@@ -112,18 +112,12 @@ func (bot *Bot) handleIncomingMessages() {
 		bot.con.SetDeadline(time.Now().Add(bot.PingTimeout))
 		msg := ParseMessage(scan.Text())
 		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
-		consumed := false
 		for _, t := range bot.triggers {
 			if t.Condition(bot, msg) {
-				consumed = t.Action(bot, msg)
-			}
-			if consumed {
-				break
+				go t.Action(bot, msg)
 			}
 		}
-		if !consumed {
-			bot.Incoming <- msg
-		}
+		bot.Incoming <- msg
 	}
 	close(bot.Incoming)
 }
