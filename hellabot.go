@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -235,6 +236,17 @@ func (bot *Bot) Run() {
 			return
 		}
 	}
+}
+
+// Reply sends a message to where the message came from (user or channel)
+func (bot *Bot) Reply(m *Message, text string) {
+	var target string
+	if strings.Contains(m.From, "#") {
+		target = m.From
+	} else {
+		target = m.To
+	}
+	bot.Msg(target, text)
 }
 
 // Msg sends a message to 'who' (user or channel)
