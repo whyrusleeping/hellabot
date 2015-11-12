@@ -77,14 +77,14 @@ the same nick and without killing the first program (different nicks wont reuse
 the same bot instance). The first program will shutdown cleanly, and the new one
 will take over.
 
-****This does not work with SSL connections, because we can't hand over a SSL connections state.*
+****This does not work with SSL connections, because we can't hand over a SSL connections state.****
+
 ### Security
 
 Hellabot supports both SSL and SASL for secure connections to whichever server
-you like. To enable SSL simple pass 'true' as the third argument to the
-NewIrcConnection function.
+you like. To enable SSL simply pass the following option to the NewBot function.
 
-```
+```go
 sslOptions = func(bot *hbot.Bot) {
     bot.SSL = true
 }
@@ -117,6 +117,7 @@ See http://godoc.org/github.com/inconshreveable/log15
 
 By default it discards all logs. In order to see any logs, give it a better handler.
 Example: This would only show INFO level and above logs, logging to STDOUT
+
 ```go
 import log "gopkg.in/inconshreveable/log15.v2"
 logHandler := log.LvlFilterHandler(log.LvlInfo, log.StdoutHandler)
