@@ -334,6 +334,7 @@ var pingPong = Trigger{
 		return true
 	},
 }
+
 var joinChannels = Trigger{
 	func(bot *Bot, m *Message) bool {
 		return m.Command == irc.RPL_WELCOME || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
@@ -350,11 +351,23 @@ var joinChannels = Trigger{
 				} else {
 					bot.Send(fmt.Sprintf("JOIN %s", channel))
 				}
-
 			}
 		})
 		return true
 	},
+}
+
+func SaslAuth(pass string) func(*Bot) {
+	return func(b *Bot) {
+		b.SASL = true
+		b.Password = pass
+	}
+}
+
+func ReconOpt() func(*Bot) {
+	return func(b *Bot) {
+		b.HijackSession = true
+	}
 }
 
 // Message represents a message received from the server
