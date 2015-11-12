@@ -241,10 +241,10 @@ func (bot *Bot) Run() {
 // Reply sends a message to where the message came from (user or channel)
 func (bot *Bot) Reply(m *Message, text string) {
 	var target string
-	if strings.Contains(m.From, "#") {
-		target = m.From
-	} else {
+	if strings.Contains(m.To, "#") {
 		target = m.To
+	} else {
+		target = m.From
 	}
 	bot.Msg(target, text)
 }
