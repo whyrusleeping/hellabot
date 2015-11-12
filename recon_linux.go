@@ -2,11 +2,14 @@ package hbot
 
 import (
 	"fmt"
-	"github.com/mudler/sendfd"
 	"net"
+
+	"github.com/mudler/sendfd"
 )
 
-func (irc *IrcCon) StartUnixListener() {
+// StartUnixListener starts up a unix domain socket listener for reconnects to
+// be sent through
+func (irc *Bot) StartUnixListener() {
 	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr)
 	if err != nil {
 		panic(err)
@@ -43,31 +46,25 @@ func (irc *IrcCon) StartUnixListener() {
 }
 
 // Attempt to hijack session previously running bot
-func (irc *IrcCon) HijackSession() bool {
-	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr)
+func (irc *Bot) hijackSession() bool {
+	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr) // The only way to get an error here is if the first parameter is not one of "unix", "unixgram" or "unixpacket". That will never happen.
 	if err != nil {
-		irc.Log(LWarning, "could not resolve unix socket")
-		return false
+		panic(err)
 	}
-
 	con, err := net.DialUnix("unix", nil, unaddr)
 	if err != nil {
-		fmt.Println("Couldnt restablish connection, no prior bot.")
-		fmt.Println(err)
+		irc.Info("Couldnt restablish connection, no prior bot.", "err", err)
 		return false
 	}
-
 	ncon, err := sendfd.RecvFD(con)
 	if err != nil {
 		panic(err)
 	}
-
 	netcon, err := net.FileConn(ncon)
 	if err != nil {
 		panic(err)
 	}
-
-	irc.reconnect = true
+	irc.reconnecting = true
 	irc.con = netcon
 	return true
 }
