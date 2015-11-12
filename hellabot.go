@@ -341,7 +341,7 @@ var joinChannels = Trigger{
 	func(bot *Bot, m *Message) bool {
 		bot.didJoinChannels.Do(func() {
 			for _, channel := range bot.Channels {
-				splitchan := strings.SplitN(channel, ":", 1)
+				splitchan := strings.SplitN(channel, ":", 2)
 				fmt.Println("splitchan is:", splitchan)
 				if len(splitchan) == 2 {
 					channel = splitchan[0]
