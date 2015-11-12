@@ -204,6 +204,7 @@ func (bot *Bot) Run() {
 	if bot.HijackSession {
 		if bot.SSL {
 			bot.Crit("Can't Hijack a SSL connection")
+			return
 		}
 		hijack = bot.hijackSession()
 		bot.Debug("Hijack", "Did we?", hijack)
@@ -212,7 +213,8 @@ func (bot *Bot) Run() {
 	if !hijack {
 		err := bot.connect(bot.Host)
 		if err != nil {
-			bot.Error("bot.Connect error", "err", err.Error())
+			bot.Crit("bot.Connect error", "err", err.Error())
+			return
 		}
 		bot.Info("Connected successfully!")
 	}
@@ -339,7 +341,16 @@ var joinChannels = Trigger{
 	func(bot *Bot, m *Message) bool {
 		bot.didJoinChannels.Do(func() {
 			for _, channel := range bot.Channels {
-				bot.Send(fmt.Sprintf("JOIN %s", channel))
+				splitchan := strings.SplitN(channel, ":", 1)
+				fmt.Println("splitchan is:", splitchan)
+				if len(splitchan) == 2 {
+					channel = splitchan[0]
+					password := splitchan[1]
+					bot.Send(fmt.Sprintf("JOIN %s %s", channel, password))
+				} else {
+					bot.Send(fmt.Sprintf("JOIN %s", channel))
+				}
+
 			}
 		})
 		return true
