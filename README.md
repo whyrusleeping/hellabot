@@ -8,12 +8,12 @@ two functions, one for the condition, and one for the action.
 ###Example Trigger
 
 ```go
-var MyTrigger = &hbot.Trigger{
-	func (irc *hbot.Bot, m *Message) bool {
+var MyTrigger = hbot.Trigger{
+	func (b *hbot.Bot, m *Message) bool {
 		return m.From == "whyrusleeping"
 	},
-	func (irc *hbot.Bot, m *hbot.Message) bool {
-		irc.Reply(m, "whyrusleeping said something")
+	func (b *hbot.Bot, m *hbot.Message) bool {
+		b.Reply(m, "whyrusleeping said something")
 		return false
 	},
 }
@@ -21,7 +21,7 @@ var MyTrigger = &hbot.Trigger{
 
 This trigger makes the bot announce to everyone that I said something
 in whatever channel we are in. To make the bot actually use this,
-add it like so:
+make a bot like so:
 
 ```go
 mybot, err := hbot.NewBot("irc.freenode.net:6667","hellabot")
@@ -29,7 +29,7 @@ if err != nil {
     panic(err)
 }
 mybot.AddTrigger(MyTrigger)
-mybot.Run() # Blocks until exit
+mybot.Run() // Blocks until exit
 ```
 
 The 'To' field on the message object in triggers will refer to the channel that
@@ -85,25 +85,31 @@ Hellabot supports both SSL and SASL for secure connections to whichever server
 you like. To enable SSL simply pass the following option to the NewBot function.
 
 ```go
-sslOptions = func(bot *hbot.Bot) {
+sslOptions := func(bot *hbot.Bot) {
     bot.SSL = true
 }
-mysslcon,err := hbot.NewBot("irc.freenode.net:6667","hellabot",sslOptions)
-// Handle err if you like
+
+mysslcon, err := hbot.NewBot("irc.freenode.net:6667","hellabot",sslOptions)
+// Handle err as you like
+
 mysslcon.Run() # Blocks until disconnect.
 ```
 
 To use SASL to authenticate with the server:
 
 ```go
-saslOptions = func(bot *hbot.Bot) {
+saslOption = func(bot *hbot.Bot) {
     bot.SASL = true
     bot.Password = "somepassword"
 }
+
+mysslcon, err := hbot.NewBot("irc.freenode.net:6667", "hellabot", saslOption)
+// Handle err as you like
+
 mysslcon.Run() # Blocks until disconnect.
 ```
 
-Note: SASL does not require SSL.
+Note: SASL does not require SSL but can be used in combination.
 
 ### Passwords
 
@@ -120,11 +126,11 @@ Example: This would only show INFO level and above logs, logging to STDOUT
 
 ```go
 import log "gopkg.in/inconshreveable/log15.v2"
+
 logHandler := log.LvlFilterHandler(log.LvlInfo, log.StdoutHandler)
 mybot.Logger.SetHandler(logHandler)
-
-This might be revisited in the future.
 ```
+Note: This might be revisited in the future.
 
 ### Why?
 
@@ -149,3 +155,14 @@ currently being used for:
 ### Credits
 
 [sorcix](http://github.com/sorcix) for his Message Parsing code
+
+
+### Contributors
+- @whyrusleeping
+- @flexd
+- @Luzifer
+- @mudler
+- @JReyLBC
+- @ForrestWeston
+- @miloprice
+
