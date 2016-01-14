@@ -50,6 +50,8 @@ type Bot struct {
 	ThrottleDelay time.Duration
 	// Maxmimum time between incoming data
 	PingTimeout time.Duration
+
+	TLSConfig tls.Config
 }
 
 func (bot *Bot) String() string {
@@ -98,7 +100,7 @@ func (bot *Bot) getNick() string {
 func (bot *Bot) connect(host string) (err error) {
 	bot.Debug("Connecting")
 	if bot.SSL {
-		bot.con, err = tls.Dial("tcp", host, &tls.Config{})
+		bot.con, err = tls.Dial("tcp", host, &bot.TLSConfig)
 	} else {
 		bot.con, err = net.Dial("tcp", host)
 	}
