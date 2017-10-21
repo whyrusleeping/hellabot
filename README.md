@@ -5,7 +5,7 @@ framework with the ability to be updated without losing connection to the
 server. To respond to an event, simply create a "Trigger" struct containing
 two functions, one for the condition, and one for the action.
 
-###Example Trigger
+### Example Trigger
 
 ```go
 var MyTrigger = hbot.Trigger{
