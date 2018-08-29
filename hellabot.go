@@ -115,11 +115,13 @@ func (bot *Bot) handleIncomingMessages() {
 		bot.con.SetDeadline(time.Now().Add(bot.PingTimeout))
 		msg := ParseMessage(scan.Text())
 		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
-		for _, t := range bot.triggers {
-			if t.Condition(bot, msg) {
-				go t.Action(bot, msg)
+		go func() {
+			for _, t := range bot.triggers {
+				if t.Condition(bot, msg) && t.Action(bot, msg) {
+					break
+				}
 			}
-		}
+		}()
 		bot.Incoming <- msg
 	}
 	close(bot.Incoming)
