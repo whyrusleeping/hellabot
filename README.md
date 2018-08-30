@@ -1,5 +1,7 @@
 # HellaBot
 
+[![GoDoc](https://godoc.org/github.com/whyrusleeping/hellabot?status.png)](https://godoc.org/github.com/whyrusleeping/hellabot)
+
 One hella-awesome irc bot. Hellabot is an easily hackable event based irc bot
 framework with the ability to be updated without losing connection to the
 server. To respond to an event, simply create a "Trigger" struct containing
