@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sorcix/irc"
+	"gopkg.in/sorcix/irc.v1"
 	log "gopkg.in/inconshreveable/log15.v2"
 	logext "gopkg.in/inconshreveable/log15.v2/ext"
 
