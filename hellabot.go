@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/sorcix/irc.v1"
 	log "gopkg.in/inconshreveable/log15.v2"
 	logext "gopkg.in/inconshreveable/log15.v2/ext"
+	"gopkg.in/sorcix/irc.v1"
 
 	"bytes"
 	"crypto/tls"
@@ -310,9 +310,27 @@ func (bot *Bot) Close() error {
 	return nil
 }
 
-// AddTrigger adds a given trigger to the bots handlers
+// AddTrigger adds a given trigger to the bot's handlers
 func (bot *Bot) AddTrigger(t Trigger) {
 	bot.triggers = append(bot.triggers, t)
+}
+
+// DropTrigger removes a trigger from the bot's handlers
+func (bot *Bot) DropTrigger(t Trigger) {
+	log.Info("Attempting to unload a trigger...")
+	var i = -1
+	for k, v := range bot.triggers {
+		log.Info("Comparing t and v:\n" + fmt.Sprintf("%+v\n", t) + fmt.Sprintf("%+v\n", v))
+		if t.Condition == v.Condition && t.Action == v.Action {
+			log.Info("found trigger at index position " + fmt.Sprintf("%d", k))
+			i = k
+		}
+	}
+	log.Info(fmt.Sprintf("Trigger index value: %d", i))
+
+	if i > -1 {
+		bot.triggers = append(bot.triggers[:i], bot.triggers[i+1:]...)
+	}
 }
 
 // Trigger is used to subscribe and react to events on the bot Server
