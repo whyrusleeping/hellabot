@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/sorcix/irc.v1"
 	log "gopkg.in/inconshreveable/log15.v2"
 	logext "gopkg.in/inconshreveable/log15.v2/ext"
+	"gopkg.in/sorcix/irc.v1"
 
 	"bytes"
 	"crypto/tls"
@@ -26,7 +26,7 @@ type Bot struct {
 	Incoming chan *Message
 	con      net.Conn
 	outgoing chan string
-	triggers []Trigger
+	handlers []Handler
 	// When did we start? Used for uptime
 	started time.Time
 	// Unix domain socket address for reconnects (linux only)
@@ -115,9 +115,10 @@ func (bot *Bot) handleIncomingMessages() {
 		bot.con.SetDeadline(time.Now().Add(bot.PingTimeout))
 		msg := ParseMessage(scan.Text())
 		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
+		// Otherwise this is mutable by DropTrigger and AddTrigger
 		go func() {
-			for _, t := range bot.triggers {
-				if t.Condition(bot, msg) && t.Action(bot, msg) {
+			for _, h := range bot.handlers {
+				if h.Handle(bot, msg) {
 					break
 				}
 			}
@@ -310,12 +311,17 @@ func (bot *Bot) Close() error {
 	return nil
 }
 
-// AddTrigger adds a given trigger to the bots handlers
-func (bot *Bot) AddTrigger(t Trigger) {
-	bot.triggers = append(bot.triggers, t)
+// AddTrigger adds a trigger to the bot's handlers
+func (bot *Bot) AddTrigger(h Handler) {
+	bot.handlers = append(bot.handlers, h)
 }
 
-// Trigger is used to subscribe and react to events on the bot Server
+// Handler is used to subscribe and react to events on the bot Server
+type Handler interface {
+	Handle(*Bot, *Message) bool
+}
+
+// Trigger is a Handler which is guarded by a condition
 type Trigger struct {
 	// Returns true if this trigger applies to the passed in message
 	Condition func(*Bot, *Message) bool
@@ -325,25 +331,30 @@ type Trigger struct {
 	Action func(*Bot, *Message) bool
 }
 
+// Handle executes the trigger action if the condition is satisfied
+func (t Trigger) Handle(b *Bot, m *Message) bool {
+	return t.Condition(b, m) && t.Action(b, m)
+}
+
 // A trigger to respond to the servers ping pong messages
 // If PingPong messages are not responded to, the server assumes the
 // client has timed out and will close the connection.
 // Note: this is automatically added in the IrcCon constructor
 var pingPong = Trigger{
-	func(bot *Bot, m *Message) bool {
+	Condition: func(bot *Bot, m *Message) bool {
 		return m.Command == "PING"
 	},
-	func(bot *Bot, m *Message) bool {
+	Action: func(bot *Bot, m *Message) bool {
 		bot.Send("PONG :" + m.Content)
 		return true
 	},
 }
 
 var joinChannels = Trigger{
-	func(bot *Bot, m *Message) bool {
+	Condition: func(bot *Bot, m *Message) bool {
 		return m.Command == irc.RPL_WELCOME || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
 	},
-	func(bot *Bot, m *Message) bool {
+	Action: func(bot *Bot, m *Message) bool {
 		bot.didJoinChannels.Do(func() {
 			for _, channel := range bot.Channels {
 				splitchan := strings.SplitN(channel, ":", 2)
