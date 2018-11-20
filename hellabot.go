@@ -36,7 +36,7 @@ type Bot struct {
 	log.Logger
 	didJoinChannels sync.Once
 	// For thread-safe access to triggers slice
-	triggersMu *sync.Mutex
+	triggersMu sync.Mutex
 
 	// Exported fields
 	Host          string
@@ -68,7 +68,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		outgoing:      make(chan string, 16),
 		started:       time.Now(),
 		unixastr:      fmt.Sprintf("@%s-%s/bot", host, nick),
-		triggersMu:    &sync.Mutex{},
+		triggersMu:    sync.Mutex{},
 		Host:          host,
 		Nick:          nick,
 		ThrottleDelay: 200 * time.Millisecond,
