@@ -35,6 +35,8 @@ type Bot struct {
 	// Log15 loggger
 	log.Logger
 	didJoinChannels sync.Once
+	// For thread-safe access to triggers slice
+	triggersMu *sync.Mutex
 
 	// Exported fields
 	Host          string
@@ -66,6 +68,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		outgoing:      make(chan string, 16),
 		started:       time.Now(),
 		unixastr:      fmt.Sprintf("@%s-%s/bot", host, nick),
+		triggersMu:    &sync.Mutex{},
 		Host:          host,
 		Nick:          nick,
 		ThrottleDelay: 200 * time.Millisecond,
@@ -312,21 +315,22 @@ func (bot *Bot) Close() error {
 
 // AddTrigger adds a given trigger to the bot's handlers
 func (bot *Bot) AddTrigger(t Trigger) {
+	bot.triggersMu.Lock()
 	bot.triggers = append(bot.triggers, t)
+	bot.triggersMu.Unlock()
 }
 
 // DropTrigger removes a trigger from the bot's handlers
-func (bot *Bot) DropTrigger(t Trigger) {
-	var i = -1
-	for k, v := range bot.triggers {
-		if t.Name != "" && t.Name == v.Name {
-			i = k
+func (bot *Bot) DropTrigger(t Trigger) bool {
+	bot.triggersMu.Lock()
+	for i, tt := range bot.triggers {
+		if t.Name != "" && t.Name == tt.Name {
+			bot.triggers = append(bot.triggers[:i], bot.triggers[i+1:]...)
+			return true
 		}
 	}
-
-	if i > -1 {
-		bot.triggers = append(bot.triggers[:i], bot.triggers[i+1:]...)
-	}
+	bot.triggersMu.Unlock()
+	return false
 }
 
 // Trigger is used to subscribe and react to events on the bot Server
