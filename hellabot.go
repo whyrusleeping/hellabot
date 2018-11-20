@@ -27,6 +27,8 @@ type Bot struct {
 	con      net.Conn
 	outgoing chan string
 	triggers []Trigger
+	// For thread-safe access to triggers slice
+	triggersMu sync.Mutex
 	// When did we start? Used for uptime
 	started time.Time
 	// Unix domain socket address for reconnects (linux only)
@@ -35,8 +37,6 @@ type Bot struct {
 	// Log15 loggger
 	log.Logger
 	didJoinChannels sync.Once
-	// For thread-safe access to triggers slice
-	triggersMu sync.Mutex
 
 	// Exported fields
 	Host          string
