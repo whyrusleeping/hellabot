@@ -321,7 +321,7 @@ func (bot *Bot) DropTrigger(t Trigger) {
 	var i = -1
 	for k, v := range bot.triggers {
 		log.Info("Comparing t and v:\n" + fmt.Sprintf("%+v\n", t) + fmt.Sprintf("%+v\n", v))
-		if t.Condition == v.Condition && t.Action == v.Action {
+		if t.Name == v.Name {
 			log.Info("found trigger at index position " + fmt.Sprintf("%d", k))
 			i = k
 		}
@@ -335,6 +335,8 @@ func (bot *Bot) DropTrigger(t Trigger) {
 
 // Trigger is used to subscribe and react to events on the bot Server
 type Trigger struct {
+	// Optional unique name to assign to the trigger. Allows for hot loading/unloading of triggers.
+	Name string
 	// Returns true if this trigger applies to the passed in message
 	Condition func(*Bot, *Message) bool
 
