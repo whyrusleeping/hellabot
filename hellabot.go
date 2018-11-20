@@ -316,20 +316,20 @@ func (bot *Bot) Close() error {
 // AddTrigger adds a given trigger to the bot's handlers
 func (bot *Bot) AddTrigger(t Trigger) {
 	bot.triggersMu.Lock()
+	defer bot.triggersMu.Unlock()
 	bot.triggers = append(bot.triggers, t)
-	bot.triggersMu.Unlock()
 }
 
 // DropTrigger removes a trigger from the bot's handlers
 func (bot *Bot) DropTrigger(t Trigger) bool {
 	bot.triggersMu.Lock()
+	defer bot.triggersMu.Unlock()
 	for i, tt := range bot.triggers {
 		if t.Name != "" && t.Name == tt.Name {
 			bot.triggers = append(bot.triggers[:i], bot.triggers[i+1:]...)
 			return true
 		}
 	}
-	bot.triggersMu.Unlock()
 	return false
 }
 
