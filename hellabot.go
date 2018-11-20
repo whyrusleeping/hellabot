@@ -331,15 +331,15 @@ func (bot *Bot) DropTrigger(t Trigger) {
 
 // Trigger is used to subscribe and react to events on the bot Server
 type Trigger struct {
+	// Optional unique name to assign to the trigger. Allows for hot loading/unloading of triggers.
+	Name string
+
 	// Returns true if this trigger applies to the passed in message
 	Condition func(*Bot, *Message) bool
 
 	// The action to perform if Condition is true
 	// return true if the message was 'consumed'
 	Action func(*Bot, *Message) bool
-
-	// Optional unique name to assign to the trigger. Allows for hot loading/unloading of triggers.
-	Name string
 }
 
 // A trigger to respond to the servers ping pong messages
@@ -347,21 +347,22 @@ type Trigger struct {
 // client has timed out and will close the connection.
 // Note: this is automatically added in the IrcCon constructor
 var pingPong = Trigger{
-	func(bot *Bot, m *Message) bool {
+	Name: "pingPong",
+	Condition: func(bot *Bot, m *Message) bool {
 		return m.Command == "PING"
 	},
-	func(bot *Bot, m *Message) bool {
+	Action: func(bot *Bot, m *Message) bool {
 		bot.Send("PONG :" + m.Content)
 		return true
 	},
-	"pingPong",
 }
 
 var joinChannels = Trigger{
-	func(bot *Bot, m *Message) bool {
+	Name: "joinChannels",
+	Condition: func(bot *Bot, m *Message) bool {
 		return m.Command == irc.RPL_WELCOME || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
 	},
-	func(bot *Bot, m *Message) bool {
+	Action: func(bot *Bot, m *Message) bool {
 		bot.didJoinChannels.Do(func() {
 			for _, channel := range bot.Channels {
 				splitchan := strings.SplitN(channel, ":", 2)
@@ -377,7 +378,6 @@ var joinChannels = Trigger{
 		})
 		return true
 	},
-	"joinChannels",
 }
 
 func SaslAuth(pass string) func(*Bot) {
