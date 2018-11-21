@@ -118,8 +118,12 @@ func (bot *Bot) handleIncomingMessages() {
 		bot.con.SetDeadline(time.Now().Add(bot.PingTimeout))
 		msg := ParseMessage(scan.Text())
 		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
+		// Otherwise this is mutable by DropTrigger and AddTrigger
 		bot.triggersMu.Lock()
-		triggers := bot.triggers
+		triggers := make([]Trigger, 0, len(b.triggers))
+		for _, v := range b.triggers {
+			triggers = append(triggers, v)
+		}
 		bot.triggersMu.Unlock()
 		go func() {
 			for _, t := range triggers {
