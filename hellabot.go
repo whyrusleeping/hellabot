@@ -26,9 +26,9 @@ type Bot struct {
 	Incoming chan *Message
 	con      net.Conn
 	outgoing chan string
-	triggers []Trigger
-	// For thread-safe access to triggers slice
-	triggersMu sync.Mutex
+	runners  []Runner
+	// For thread-safe access to runners slice
+	runnersMu sync.Mutex
 	// When did we start? Used for uptime
 	started time.Time
 	// Unix domain socket address for reconnects (linux only)
@@ -68,7 +68,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		outgoing:      make(chan string, 16),
 		started:       time.Now(),
 		unixastr:      fmt.Sprintf("@%s-%s/bot", host, nick),
-		triggersMu:    sync.Mutex{},
+		runnersMu:     sync.Mutex{},
 		Host:          host,
 		Nick:          nick,
 		ThrottleDelay: 200 * time.Millisecond,
@@ -119,15 +119,13 @@ func (bot *Bot) handleIncomingMessages() {
 		msg := ParseMessage(scan.Text())
 		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
 		// Otherwise this is mutable by DropTrigger and AddTrigger
-		bot.triggersMu.Lock()
-		triggers := make([]Trigger, 0, len(b.triggers))
-		for _, v := range b.triggers {
-			triggers = append(triggers, v)
-		}
-		bot.triggersMu.Unlock()
+		bot.runnersMu.Lock()
+		runners := make([]Runner, len(bot.runners))
+		copy(runners, bot.runners)
+		bot.runnersMu.Unlock()
 		go func() {
-			for _, t := range triggers {
-				if t.Condition(bot, msg) && t.Action(bot, msg) {
+			for _, t := range runners {
+				if t.Run(bot, msg) {
 					break
 				}
 			}
@@ -321,30 +319,34 @@ func (bot *Bot) Close() error {
 }
 
 // AddTrigger adds a given trigger to the bot's handlers
-func (bot *Bot) AddTrigger(t Trigger) {
-	bot.triggersMu.Lock()
-	defer bot.triggersMu.Unlock()
-	bot.triggers = append(bot.triggers, t)
+func (bot *Bot) AddTrigger(r Runner) {
+	bot.runnersMu.Lock()
+	bot.runners = append(bot.runners, r)
+	bot.runnersMu.Unlock()
 }
 
 // DropTrigger removes a trigger from the bot's handlers
-func (bot *Bot) DropTrigger(t Trigger) bool {
-	bot.triggersMu.Lock()
-	defer bot.triggersMu.Unlock()
-	for i, tt := range bot.triggers {
-		if t.Name != "" && t.Name == tt.Name {
-			bot.triggers = append(bot.triggers[:i], bot.triggers[i+1:]...)
+func (bot *Bot) DropTrigger(r Runner) bool {
+	bot.runnersMu.Lock()
+	defer bot.runnersMu.Unlock()
+	name := r.Name()
+	for i, tt := range bot.runners {
+		if name != "" && name == tt.Name() {
+			bot.runners = append(bot.runners[:i], bot.runners[i+1:]...)
 			return true
 		}
 	}
 	return false
 }
 
-// Trigger is used to subscribe and react to events on the bot Server
-type Trigger struct {
-	// Optional unique name to assign to the trigger. Allows for hot loading/unloading of triggers.
-	Name string
+// Runner is used to subscribe and react to events on the bot Server
+type Runner interface {
+	Name() string
+	Run(*Bot, *Message) bool
+}
 
+// Trigger is a Runner which is guarded by a condition
+type Trigger struct {
 	// Returns true if this trigger applies to the passed in message
 	Condition func(*Bot, *Message) bool
 
@@ -353,12 +355,22 @@ type Trigger struct {
 	Action func(*Bot, *Message) bool
 }
 
+// Name always returns an empty string
+func (t Trigger) Name() string { return "" }
+
+// Run executes the trigger action if the condition is satisfied
+func (t Trigger) Run(b *Bot, m *Message) bool {
+	if !t.Condition(b, m) {
+		return false
+	}
+	return t.Action(b, m)
+}
+
 // A trigger to respond to the servers ping pong messages
 // If PingPong messages are not responded to, the server assumes the
 // client has timed out and will close the connection.
 // Note: this is automatically added in the IrcCon constructor
 var pingPong = Trigger{
-	Name: "pingPong",
 	Condition: func(bot *Bot, m *Message) bool {
 		return m.Command == "PING"
 	},
@@ -369,7 +381,6 @@ var pingPong = Trigger{
 }
 
 var joinChannels = Trigger{
-	Name: "joinChannels",
 	Condition: func(bot *Bot, m *Message) bool {
 		return m.Command == irc.RPL_WELCOME || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
 	},
