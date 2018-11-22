@@ -26,9 +26,9 @@ type Bot struct {
 	Incoming chan *Message
 	con      net.Conn
 	outgoing chan string
-	runners  []Runner
-	// For thread-safe access to runners slice
-	runnersMu sync.Mutex
+	handlers []Handler
+	// For thread-safe access to handlers slice
+	handlersMu sync.Mutex
 	// When did we start? Used for uptime
 	started time.Time
 	// Unix domain socket address for reconnects (linux only)
@@ -68,7 +68,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		outgoing:      make(chan string, 16),
 		started:       time.Now(),
 		unixastr:      fmt.Sprintf("@%s-%s/bot", host, nick),
-		runnersMu:     sync.Mutex{},
+		handlersMu:    sync.Mutex{},
 		Host:          host,
 		Nick:          nick,
 		ThrottleDelay: 200 * time.Millisecond,
@@ -119,13 +119,13 @@ func (bot *Bot) handleIncomingMessages() {
 		msg := ParseMessage(scan.Text())
 		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
 		// Otherwise this is mutable by DropTrigger and AddTrigger
-		bot.runnersMu.Lock()
-		runners := make([]Runner, len(bot.runners))
-		copy(runners, bot.runners)
-		bot.runnersMu.Unlock()
+		bot.handlersMu.Lock()
+		handlers := make([]Handler, len(bot.handlers))
+		copy(handlers, bot.handlers)
+		bot.handlersMu.Unlock()
 		go func() {
-			for _, t := range runners {
-				if t.Run(bot, msg) {
+			for _, h := range handlers {
+				if h.Handle(bot, msg) {
 					break
 				}
 			}
@@ -318,34 +318,35 @@ func (bot *Bot) Close() error {
 	return nil
 }
 
-// AddTrigger adds a given trigger to the bot's handlers
-func (bot *Bot) AddTrigger(r Runner) {
-	bot.runnersMu.Lock()
-	bot.runners = append(bot.runners, r)
-	bot.runnersMu.Unlock()
+// AddTrigger adds a trigger to the bot's handlers
+func (bot *Bot) AddTrigger(h Handler) {
+	bot.handlersMu.Lock()
+	bot.handlers = append(bot.handlers, h)
+	bot.handlersMu.Unlock()
 }
 
 // DropTrigger removes a trigger from the bot's handlers
-func (bot *Bot) DropTrigger(r Runner) bool {
-	bot.runnersMu.Lock()
-	defer bot.runnersMu.Unlock()
-	name := r.Name()
-	for i, tt := range bot.runners {
+// Note: this depends on the handler's Name method
+func (bot *Bot) DropTrigger(h Handler) bool {
+	bot.handlersMu.Lock()
+	defer bot.handlersMu.Unlock()
+	name := h.Name()
+	for i, tt := range bot.handlers {
 		if name != "" && name == tt.Name() {
-			bot.runners = append(bot.runners[:i], bot.runners[i+1:]...)
+			bot.handlers = append(bot.handlers[:i], bot.handlers[i+1:]...)
 			return true
 		}
 	}
 	return false
 }
 
-// Runner is used to subscribe and react to events on the bot Server
-type Runner interface {
+// Handler is used to subscribe and react to events on the bot Server
+type Handler interface {
 	Name() string
-	Run(*Bot, *Message) bool
+	Handle(*Bot, *Message) bool
 }
 
-// Trigger is a Runner which is guarded by a condition
+// Trigger is a handler which is guarded by a condition
 type Trigger struct {
 	// Returns true if this trigger applies to the passed in message
 	Condition func(*Bot, *Message) bool
@@ -358,8 +359,8 @@ type Trigger struct {
 // Name always returns an empty string
 func (t Trigger) Name() string { return "" }
 
-// Run executes the trigger action if the condition is satisfied
-func (t Trigger) Run(b *Bot, m *Message) bool {
+// Handle executes the trigger action if the condition is satisfied
+func (t Trigger) Handle(b *Bot, m *Message) bool {
 	if !t.Condition(b, m) {
 		return false
 	}
