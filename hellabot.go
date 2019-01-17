@@ -149,7 +149,7 @@ func (bot *Bot) SASLAuthenticate(user, pass string) {
 	bot.sendUserCommand(bot.Nick, bot.Nick, "8")
 
 	bot.WaitFor(func(mes *Message) bool {
-		return mes.Content == "sasl" && len(mes.Params) > 1 && mes.Params[1] == "ACK"
+		return strings.TrimSpace(mes.Content) == "sasl" && len(mes.Params) > 1 && mes.Params[1] == "ACK"
 	})
 	bot.Debug("Recieved SASL ACK")
 	bot.Send("AUTHENTICATE PLAIN")
