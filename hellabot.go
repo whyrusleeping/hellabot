@@ -43,6 +43,10 @@ type Bot struct {
 	SSL           bool
 	SASL          bool
 	HijackSession bool
+	// An optional function that connects to an IRC server over plaintext:
+	Dial func(network, addr string) (net.Conn, error)
+	// An optional function that connects to an IRC server over a secured connection:
+	DialTLS func(network, addr string, tlsConf *tls.Config) (*tls.Conn, error)
 	// This bots nick
 	Nick string
 	// Duration to wait between sending of messages to avoid being
@@ -99,12 +103,21 @@ func (bot *Bot) getNick() string {
 
 func (bot *Bot) connect(host string) (err error) {
 	bot.Debug("Connecting")
-	if bot.SSL {
-		bot.con, err = tls.Dial("tcp", host, &bot.TLSConfig)
-	} else {
-		bot.con, err = net.Dial("tcp", host)
+	dial := bot.Dial
+	if dial == nil {
+		dial = net.Dial
 	}
-	return
+	dialTLS := bot.DialTLS
+	if dialTLS == nil {
+		dialTLS = tls.Dial
+	}
+
+	if bot.SSL {
+		bot.con, err = dialTLS("tcp", host, &bot.TLSConfig)
+	} else {
+		bot.con, err = dial("tcp", host)
+	}
+	return err
 }
 
 // Incoming message gathering routine
