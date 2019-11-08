@@ -302,6 +302,11 @@ func (bot *Bot) Join(ch string) {
 	bot.Send("JOIN " + ch)
 }
 
+// Part a channel
+func (bot *Bot) Part(ch, msg string) {
+	bot.Send("PART " + ch + " " + msg)
+}
+
 // Close closes the bot
 func (bot *Bot) Close() error {
 	if bot.unixlist != nil {
