@@ -2,7 +2,7 @@
 
 [![GoDoc](https://godoc.org/github.com/whyrusleeping/hellabot?status.png)](https://godoc.org/github.com/whyrusleeping/hellabot)
 
-One hella-awesome irc bot. Hellabot is an easily hackable event based irc bot
+One hella-awesome Internet Relay Chat (IRC) bot. Hellabot is an easily hackable event based IRC bot
 framework with the ability to be updated without losing connection to the
 server. To respond to an event, simply create a "Trigger" struct containing
 two functions, one for the condition, and one for the action.
@@ -21,9 +21,7 @@ var MyTrigger = hbot.Trigger{
 }
 ```
 
-This trigger makes the bot announce to everyone that I said something
-in whatever channel we are in. To make the bot actually use this,
-make a bot like so:
+The trigger makes the bot announce to everyone that something was said in the current channel. Use the code snippet below to make the bot and add the trigger.
 
 ```go
 mybot, err := hbot.NewBot("irc.freenode.net:6667","hellabot")
@@ -34,9 +32,10 @@ mybot.AddTrigger(MyTrigger)
 mybot.Run() // Blocks until exit
 ```
 
+
 The 'To' field on the message object in triggers will refer to the channel that
 a given message is in, unless it is a server message, or a user to user private
-message, in which case it will be the target user's name.
+message. In such cases, the field will be the target user's name.
 
 For more example triggers, check the examples directory.
 
@@ -74,9 +73,9 @@ Hellabot is able to restart without dropping its connection to the server
 (on Linux machines) by passing the TCP connection through a UNIX domain socket.
 This allows you to update triggers and other addons without actually logging
 your bot out of the IRC, avoiding the loss of op status and spamming the channel
-with constant join/part messages. To do this, simply run the program again with
+with constant join/part messages. To do this, run the program again with
 the same nick and without killing the first program (different nicks wont reuse
-the same bot instance). The first program will shutdown cleanly, and the new one
+the same bot instance). The first program will shutdown, and the new one
 will take over.
 
 ****This does not work with SSL connections, because we can't hand over a SSL connections state.****
@@ -84,7 +83,7 @@ will take over.
 ### Security
 
 Hellabot supports both SSL and SASL for secure connections to whichever server
-you like. To enable SSL simply pass the following option to the NewBot function.
+you like. To enable SSL, pass the following option to the NewBot function.
 
 ```go
 sslOptions := func(bot *hbot.Bot) {
@@ -136,8 +135,8 @@ Note: This might be revisited in the future.
 
 ### Why?
 
-What do you need an IRC bot for you ask? Why, I've gone through the trouble of
-compiling a list of fun things for you! Some of these are what hellabot is
+What do you need an IRC bot for you ask? Well, I've gone through the trouble of
+compiling a list of fun things for you! The following are some of the things hellabot is
 currently being used for:
 
 - AutoOp Bot: ops you when you join the channel
