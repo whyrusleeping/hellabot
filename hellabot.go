@@ -270,20 +270,32 @@ func (bot *Bot) Reply(m *Message, text string) {
 
 // Msg sends a message to 'who' (user or channel)
 func (bot *Bot) Msg(who, text string) {
-	for len(text) > 400 {
-		bot.Send("PRIVMSG " + who + " :" + text[:400])
-		text = text[400:]
+	for _, line := range splitText(text) {
+		bot.Send("PRIVMSG " + who + " :" + line)
 	}
-	bot.Send("PRIVMSG " + who + " :" + text)
 }
 
 // Notice sends a NOTICE message to 'who' (user or channel)
 func (bot *Bot) Notice(who, text string) {
-	for len(text) > 400 {
-		bot.Send("NOTICE " + who + " :" + text[:400])
-		text = text[400:]
+	for _, line := range splitText(text) {
+		bot.Send("NOTICE " + who + " :" + line)
 	}
-	bot.Send("NOTICE " + who + " :" + text)
+}
+
+// Splits a given string into a string slice, in chunks ending
+// either with \n, or with \r\n, or of a size of 400 characters.
+func splitText(text string) []string {
+	var ret []string
+	scanner := bufio.NewScanner(strings.NewReader(text))
+	for scanner.Scan() {
+		line := scanner.Text()
+		for len(line) > 400 {
+			ret = append(ret, line[:400])
+			line = line[400:]
+		}
+		ret = append(ret, line)
+	}
+	return ret
 }
 
 // Action sends an action to 'who' (user or channel)
