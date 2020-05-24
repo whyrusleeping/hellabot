@@ -1,3 +1,5 @@
+// +build freebsd netbsd openbsd windows
+
 package hbot
 
 func (irc *Bot) StartUnixListener() {}
