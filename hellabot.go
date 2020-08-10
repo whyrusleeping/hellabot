@@ -7,10 +7,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	log "gopkg.in/inconshreveable/log15.v2"
 	logext "gopkg.in/inconshreveable/log15.v2/ext"
-	"gopkg.in/sorcix/irc.v1"
+	"gopkg.in/sorcix/irc.v2"
 
 	"bytes"
 	"crypto/tls"
@@ -22,16 +23,18 @@ type Bot struct {
 
 	// This is set if we have hijacked a connection
 	reconnecting bool
-	// Channel for user to read incoming messages
-	Incoming chan *Message
+	// Channel to indicate shutdown
+	closer   chan struct{}
 	con      net.Conn
 	outgoing chan string
 	handlers []Handler
 	// When did we start? Used for uptime
 	started time.Time
-	// Unix domain socket address for reconnects (linux only)
-	unixastr string
-	unixlist net.Listener
+	// Unix domain abstract socket address for reconnects (linux only)
+	unixAbstractSocket string
+	// Unix domain socket for other Unixes
+	unixClassicSocket string
+	unixlist          net.Listener
 	// Log15 loggger
 	log.Logger
 	didJoinChannels sync.Once
@@ -43,6 +46,10 @@ type Bot struct {
 	SSL           bool
 	SASL          bool
 	HijackSession bool
+	// HijackAfterFunc executes in its own goroutine after a succesful session hijack
+	// If you need to do something after a hijack
+	// for example, to run some irc commands or to restore some state
+	HijackAfterFunc func()
 	// An optional function that connects to an IRC server over plaintext:
 	Dial func(network, addr string) (net.Conn, error)
 	// An optional function that connects to an IRC server over a secured connection:
@@ -56,6 +63,8 @@ type Bot struct {
 	PingTimeout time.Duration
 
 	TLSConfig tls.Config
+	// Bot's prefix
+	Prefix *irc.Prefix
 }
 
 func (bot *Bot) String() string {
@@ -66,29 +75,39 @@ func (bot *Bot) String() string {
 func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	// Defaults are set here
 	bot := Bot{
-		Incoming:      make(chan *Message, 16),
-		outgoing:      make(chan string, 16),
-		started:       time.Now(),
-		unixastr:      fmt.Sprintf("@%s-%s/bot", host, nick),
-		Host:          host,
-		Nick:          nick,
-		ThrottleDelay: 200 * time.Millisecond,
-		PingTimeout:   300 * time.Second,
-		HijackSession: false,
-		SSL:           false,
-		SASL:          false,
-		Channels:      []string{"#test"},
-		Password:      "",
+		closer:             make(chan struct{}),
+		outgoing:           make(chan string, 16),
+		started:            time.Now(),
+		unixAbstractSocket: fmt.Sprintf("@%s-%s/bot", host, nick),
+		unixClassicSocket:  fmt.Sprintf("/tmp/%s-%s-bot.sock", host, nick),
+		Host:               host,
+		Nick:               nick,
+		ThrottleDelay:      200 * time.Millisecond,
+		PingTimeout:        300 * time.Second,
+		HijackSession:      false,
+		HijackAfterFunc:    func() {},
+		SSL:                false,
+		SASL:               false,
+		Channels:           []string{"#test"},
+		Password:           "",
+		// Somewhat sane default if for some reason we can't retrieve bot's prefix
+		// for example, if the server doesn't advertise joins
+		Prefix: &irc.Prefix{
+			Name: nick,
+			User: strings.Repeat("u", 9),
+			Host: strings.Repeat("h", 80),
+		},
 	}
 	for _, option := range options {
 		option(&bot)
 	}
 	// Discard logs by default
-	bot.Logger = log.New("id", logext.RandId(8), "host", bot.Host, "nick", log.Lazy{bot.getNick})
+	bot.Logger = log.New("id", logext.RandId(8), "host", bot.Host, "nick", log.Lazy{Fn: bot.getNick})
 
 	bot.Logger.SetHandler(log.DiscardHandler())
 	bot.AddTrigger(pingPong)
 	bot.AddTrigger(joinChannels)
+	bot.AddTrigger(getPrefix)
 	return &bot, nil
 }
 
@@ -135,9 +154,8 @@ func (bot *Bot) handleIncomingMessages() {
 				}
 			}
 		}()
-		bot.Incoming <- msg
 	}
-	close(bot.Incoming)
+	close(bot.closer)
 }
 
 // Handles message speed throtling
@@ -156,38 +174,34 @@ func (bot *Bot) handleOutgoingMessages() {
 // SASLAuthenticate performs SASL authentication
 // ref: https://github.com/atheme/charybdis/blob/master/doc/sasl.txt
 func (bot *Bot) SASLAuthenticate(user, pass string) {
+	var saslHandler = Trigger{
+		Condition: func(bot *Bot, mes *Message) bool {
+			return (strings.TrimSpace(mes.Content) == "sasl" && len(mes.Params) > 1 && mes.Params[1] == "ACK") ||
+				(mes.Command == "AUTHENTICATE" && len(mes.Params) == 1 && mes.Params[0] == "+")
+		},
+		Action: func(bot *Bot, mes *Message) bool {
+			if strings.TrimSpace(mes.Content) == "sasl" && len(mes.Params) > 1 && mes.Params[1] == "ACK" {
+				bot.Debug("Recieved SASL ACK")
+				bot.Send("AUTHENTICATE PLAIN")
+			}
+
+			if mes.Command == "AUTHENTICATE" && len(mes.Params) == 1 && mes.Params[0] == "+" {
+				bot.Debug("Got auth message!")
+				out := bytes.Join([][]byte{[]byte(user), []byte(user), []byte(pass)}, []byte{0})
+				encpass := base64.StdEncoding.EncodeToString(out)
+				bot.Send("AUTHENTICATE " + encpass)
+				bot.Send("AUTHENTICATE +")
+				bot.Send("CAP END")
+			}
+			return false
+		},
+	}
+
+	bot.AddTrigger(saslHandler)
 	bot.Debug("Beginning SASL Authentication")
 	bot.Send("CAP REQ :sasl")
 	bot.SetNick(bot.Nick)
 	bot.sendUserCommand(bot.Nick, bot.Nick, "8")
-
-	bot.WaitFor(func(mes *Message) bool {
-		return strings.TrimSpace(mes.Content) == "sasl" && len(mes.Params) > 1 && mes.Params[1] == "ACK"
-	})
-	bot.Debug("Recieved SASL ACK")
-	bot.Send("AUTHENTICATE PLAIN")
-
-	bot.WaitFor(func(mes *Message) bool {
-		return mes.Command == "AUTHENTICATE" && len(mes.Params) == 1 && mes.Params[0] == "+"
-	})
-
-	bot.Debug("Got auth message!")
-
-	out := bytes.Join([][]byte{[]byte(user), []byte(user), []byte(pass)}, []byte{0})
-	encpass := base64.StdEncoding.EncodeToString(out)
-	bot.Send("AUTHENTICATE " + encpass)
-	bot.Send("AUTHENTICATE +")
-	bot.Send("CAP END")
-}
-
-// WaitFor will block until a message matching the given filter is received
-func (bot *Bot) WaitFor(filter func(*Message) bool) {
-	for mes := range bot.Incoming {
-		if filter(mes) {
-			return
-		}
-	}
-	return
 }
 
 // StandardRegistration performsa a basic set of registration commands
@@ -209,6 +223,7 @@ func (bot *Bot) sendUserCommand(user, realname, mode string) {
 // SetNick sets the bots nick on the irc server
 func (bot *Bot) SetNick(nick string) {
 	bot.Nick = nick
+	bot.Prefix.Name = nick
 	bot.Send(fmt.Sprintf("NICK %s", nick))
 }
 
@@ -239,6 +254,10 @@ func (bot *Bot) Run() {
 	go bot.handleIncomingMessages()
 	go bot.handleOutgoingMessages()
 
+	if hijack {
+		go bot.HijackAfterFunc()
+	}
+
 	go bot.StartUnixListener()
 
 	// Only register on an initial connection
@@ -249,11 +268,10 @@ func (bot *Bot) Run() {
 			bot.StandardRegistration()
 		}
 	}
-	for m := range bot.Incoming {
-		if m == nil {
-			log.Info("Disconnected")
-			return
-		}
+	select {
+	case <-bot.closer:
+		log.Info("Disconnected")
+		return
 	}
 }
 
@@ -270,28 +288,43 @@ func (bot *Bot) Reply(m *Message, text string) {
 
 // Msg sends a message to 'who' (user or channel)
 func (bot *Bot) Msg(who, text string) {
-	for _, line := range splitText(text) {
+	for _, line := range splitText(text, "PRIVMSG", who, bot.Prefix) {
 		bot.Send("PRIVMSG " + who + " :" + line)
 	}
 }
 
 // Notice sends a NOTICE message to 'who' (user or channel)
 func (bot *Bot) Notice(who, text string) {
-	for _, line := range splitText(text) {
+	for _, line := range splitText(text, "NOTICE", who, bot.Prefix) {
 		bot.Send("NOTICE " + who + " :" + line)
 	}
 }
 
 // Splits a given string into a string slice, in chunks ending
-// either with \n, or with \r\n, or of a size of 400 characters.
-func splitText(text string) []string {
+// either with \n, or with \r\n, or splitting text to maximally allowed size.
+func splitText(text, command, who string, prefix *irc.Prefix) []string {
 	var ret []string
+
+	// Maximum message size that fits into 512 bytes
+	maxSize := 510 - 2 - prefix.Len() - len(fmt.Sprintf("%s %s :", command, who))
+
 	scanner := bufio.NewScanner(strings.NewReader(text))
 	for scanner.Scan() {
 		line := scanner.Text()
-		for len(line) > 400 {
-			ret = append(ret, line[:400])
-			line = line[400:]
+		for len(line) > maxSize {
+			totalSize := 0
+			// utf-8 aware splitting
+			for _, v := range line {
+				runeSize := utf8.RuneLen(v)
+				if totalSize+runeSize > maxSize {
+					ret = append(ret, line[:totalSize])
+					line = line[totalSize:]
+					totalSize = runeSize
+					continue
+				}
+				totalSize += runeSize
+			}
+
 		}
 		ret = append(ret, line)
 	}
@@ -356,7 +389,7 @@ type Trigger struct {
 	Condition func(*Bot, *Message) bool
 
 	// The action to perform if Condition is true
-	// return true if the message was 'consumed'
+	// return true to stop evaluating the rest of triggers
 	Action func(*Bot, *Message) bool
 }
 
@@ -375,7 +408,9 @@ var pingPong = Trigger{
 	},
 	Action: func(bot *Bot, m *Message) bool {
 		bot.Send("PONG :" + m.Content)
-		return true
+		// Don't set to true
+		// someone might want to catch PINGs
+		return false
 	},
 }
 
@@ -397,10 +432,25 @@ var joinChannels = Trigger{
 				}
 			}
 		})
-		return true
+		// Don't set to true
+		// someone might want to catch irc.RPL_WELCOME or irc.RPL_ENDOFMOTD
+		return false
 	},
 }
 
+// Get bot's prefix by catching its own join
+var getPrefix = Trigger{
+	Condition: func(bot *Bot, m *Message) bool {
+		return (m.Command == "JOIN" && m.Name == bot.Nick)
+	},
+	Action: func(bot *Bot, m *Message) bool {
+		bot.Prefix = m.Prefix
+		bot.Debug("Got prefix", "prefix", bot.Prefix.String())
+		return false
+	},
+}
+
+// SaslAuth Helper
 func SaslAuth(pass string) func(*Bot) {
 	return func(b *Bot) {
 		b.SASL = true
@@ -408,6 +458,7 @@ func SaslAuth(pass string) func(*Bot) {
 	}
 }
 
+// ReconOpt helper
 func ReconOpt() func(*Bot) {
 	return func(b *Bot) {
 		b.HijackSession = true
@@ -438,12 +489,12 @@ type Message struct {
 func ParseMessage(raw string) (m *Message) {
 	m = new(Message)
 	m.Message = irc.ParseMessage(raw)
-	m.Content = m.Trailing
+	m.Content = m.Trailing()
 
 	if len(m.Params) > 0 {
 		m.To = m.Params[0]
 	} else if m.Command == "JOIN" {
-		m.To = m.Trailing
+		m.To = m.Trailing()
 	}
 	if m.Prefix != nil {
 		m.From = m.Prefix.Name

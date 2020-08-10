@@ -1,3 +1,5 @@
+// +build freebsd openbsd dragonfly netbsd darwin
+
 package hbot
 
 import (
@@ -5,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"syscall"
 
 	"github.com/ftrvxmtrx/fd"
 	"gopkg.in/sorcix/irc.v2"
@@ -13,10 +16,14 @@ import (
 // StartUnixListener starts up a unix domain socket listener for reconnects to
 // be sent through
 func (bot *Bot) StartUnixListener() {
-	unaddr, err := net.ResolveUnixAddr("unix", bot.unixAbstractSocket)
+	unaddr, err := net.ResolveUnixAddr("unix", bot.unixClassicSocket)
 	if err != nil {
 		panic(err)
 	}
+
+	// Unlink the socket so we don't have to worry about removing it
+	// We can ignore any error here
+	syscall.Unlink(bot.unixClassicSocket)
 
 	list, err := net.ListenUnix("unix", unaddr)
 	if err != nil {
@@ -54,7 +61,7 @@ func (bot *Bot) StartUnixListener() {
 
 // Attempt to hijack session previously running bot
 func (bot *Bot) hijackSession() bool {
-	con, err := net.Dial("unix", bot.unixAbstractSocket)
+	con, err := net.Dial("unix", bot.unixClassicSocket)
 	if err != nil {
 		bot.Info("Couldnt restablish connection, no prior bot.", "err", err)
 		return false
