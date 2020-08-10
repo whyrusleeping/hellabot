@@ -4,67 +4,69 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/mudler/sendfd"
+	"github.com/ftrvxmtrx/fd"
 )
 
 // StartUnixListener starts up a unix domain socket listener for reconnects to
 // be sent through
-func (irc *Bot) StartUnixListener() {
-	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr)
-	if err != nil {
-		panic(err)
-	}
-	list, err := net.ListenUnix("unix", unaddr)
+func (bot *Bot) StartUnixListener() {
+	unaddr, err := net.ResolveUnixAddr("unix", bot.unixastr)
 	if err != nil {
 		panic(err)
 	}
 
-	irc.unixlist = list
+	list, err := net.ListenUnix("unix", unaddr)
+	if err != nil {
+		panic(err)
+	}
+	defer list.Close()
+	bot.unixlist = list
+
 	con, err := list.AcceptUnix()
 	if err != nil {
 		fmt.Println("unix listener error: ", err)
 		return
 	}
-	list.Close()
+	defer con.Close()
 
-	fi, err := irc.con.(*net.TCPConn).File()
+	fi, err := bot.con.(*net.TCPConn).File()
 	if err != nil {
 		panic(err)
 	}
 
-	err = sendfd.SendFD(con, fi)
+	err = fd.Put(con, fi)
 	if err != nil {
 		panic(err)
 	}
 
 	select {
-	case <-irc.Incoming:
+	case <-bot.Incoming:
 	default:
-		close(irc.Incoming)
+		close(bot.Incoming)
 	}
-	close(irc.outgoing)
+	close(bot.outgoing)
 }
 
 // Attempt to hijack session previously running bot
-func (irc *Bot) hijackSession() bool {
-	unaddr, err := net.ResolveUnixAddr("unix", irc.unixastr) // The only way to get an error here is if the first parameter is not one of "unix", "unixgram" or "unixpacket". That will never happen.
+func (bot *Bot) hijackSession() bool {
+	con, err := net.Dial("unix", bot.unixastr)
 	if err != nil {
-		panic(err)
-	}
-	con, err := net.DialUnix("unix", nil, unaddr)
-	if err != nil {
-		irc.Info("Couldnt restablish connection, no prior bot.", "err", err)
+		bot.Info("Couldnt restablish connection, no prior bot.", "err", err)
 		return false
 	}
-	ncon, err := sendfd.RecvFD(con)
+	defer con.Close()
+
+	ncon, err := fd.Get(con.(*net.UnixConn), 1, nil)
 	if err != nil {
 		panic(err)
 	}
-	netcon, err := net.FileConn(ncon)
+	defer ncon[0].Close()
+
+	netcon, err := net.FileConn(ncon[0])
 	if err != nil {
 		panic(err)
 	}
-	irc.reconnecting = true
-	irc.con = netcon
+	bot.reconnecting = true
+	bot.con = netcon
 	return true
 }

@@ -1,4 +1,4 @@
-// +build freebsd netbsd openbsd windows
+// +build !linux,!freebsd,!openbsd,!dragonfly,!netbsd,!darwin
 
 package hbot
 

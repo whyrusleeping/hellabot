@@ -29,8 +29,10 @@ type Bot struct {
 	handlers []Handler
 	// When did we start? Used for uptime
 	started time.Time
-	// Unix domain socket address for reconnects (linux only)
+	// Unix domain abstract socket address for reconnects (linux only)
 	unixastr string
+	// Unix domain socket address for other Unixes
+	unixsock string
 	unixlist net.Listener
 	// Log15 loggger
 	log.Logger
@@ -70,6 +72,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		outgoing:      make(chan string, 16),
 		started:       time.Now(),
 		unixastr:      fmt.Sprintf("@%s-%s/bot", host, nick),
+		unixsock:      fmt.Sprintf("/tmp/%s-%s-bot.sock", host, nick),
 		Host:          host,
 		Nick:          nick,
 		ThrottleDelay: 200 * time.Millisecond,
