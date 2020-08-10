@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/whyrusleeping/hellabot"
+	hbot "github.com/whyrusleeping/hellabot"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
 
@@ -27,8 +27,8 @@ func main() {
 		panic(err)
 	}
 
-	irc.AddTrigger(SayInfoMessage)
-	irc.AddTrigger(LongTrigger)
+	irc.AddTrigger(sayInfoMessage)
+	irc.AddTrigger(longTrigger)
 	irc.Logger.SetHandler(log.StdoutHandler)
 	// logHandler := log.LvlFilterHandler(log.LvlInfo, log.StdoutHandler)
 	// or
@@ -42,25 +42,25 @@ func main() {
 }
 
 // This trigger replies Hello when you say hello
-var SayInfoMessage = hbot.Trigger{
-	func(bot *hbot.Bot, m *hbot.Message) bool {
-		return m.Command == "PRIVMSG" && m.Content == "-info"
+var sayInfoMessage = hbot.Trigger{
+	Condition: func(bot *hbot.Bot, mes *hbot.Message) bool {
+		return mes.Command == "PRIVMSG" && mes.Content == "-info"
 	},
-	func(irc *hbot.Bot, m *hbot.Message) bool {
-		irc.Reply(m, "Hello")
+	Action: func(irc *hbot.Bot, mes *hbot.Message) bool {
+		irc.Reply(mes, "Hello")
 		return false
 	},
 }
 
 // This trigger replies Hello when you say hello
-var LongTrigger = hbot.Trigger{
-	func(bot *hbot.Bot, m *hbot.Message) bool {
-		return m.Command == "PRIVMSG" && m.Content == "-long"
+var longTrigger = hbot.Trigger{
+	Condition: func(bot *hbot.Bot, mes *hbot.Message) bool {
+		return mes.Command == "PRIVMSG" && mes.Content == "-long"
 	},
-	func(irc *hbot.Bot, m *hbot.Message) bool {
-		irc.Reply(m, "This is the first message")
+	Action: func(irc *hbot.Bot, mes *hbot.Message) bool {
+		irc.Reply(mes, "This is the first message")
 		time.Sleep(5 * time.Second)
-		irc.Reply(m, "This is the second message")
+		irc.Reply(mes, "This is the second message")
 
 		return false
 	},
