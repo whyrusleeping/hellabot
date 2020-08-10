@@ -43,24 +43,24 @@ func main() {
 
 // This trigger replies Hello when you say hello
 var sayInfoMessage = hbot.Trigger{
-	Condition: func(bot *hbot.Bot, mes *hbot.Message) bool {
-		return mes.Command == "PRIVMSG" && mes.Content == "-info"
+	Condition: func(bot *hbot.Bot, m *hbot.Message) bool {
+		return m.Command == "PRIVMSG" && m.Content == "-info"
 	},
-	Action: func(irc *hbot.Bot, mes *hbot.Message) bool {
-		irc.Reply(mes, "Hello")
+	Action: func(irc *hbot.Bot, m *hbot.Message) bool {
+		irc.Reply(m, "Hello")
 		return false
 	},
 }
 
 // This trigger replies Hello when you say hello
 var longTrigger = hbot.Trigger{
-	Condition: func(bot *hbot.Bot, mes *hbot.Message) bool {
-		return mes.Command == "PRIVMSG" && mes.Content == "-long"
+	Condition: func(bot *hbot.Bot, m *hbot.Message) bool {
+		return m.Command == "PRIVMSG" && m.Content == "-long"
 	},
-	Action: func(irc *hbot.Bot, mes *hbot.Message) bool {
-		irc.Reply(mes, "This is the first message")
+	Action: func(irc *hbot.Bot, m *hbot.Message) bool {
+		irc.Reply(m, "This is the first message")
 		time.Sleep(5 * time.Second)
-		irc.Reply(mes, "This is the second message")
+		irc.Reply(m, "This is the second message")
 
 		return false
 	},
