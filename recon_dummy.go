@@ -1,3 +1,5 @@
+// +build !linux,!freebsd,!openbsd,!dragonfly,!netbsd,!darwin
+
 package hbot
 
 func (irc *Bot) StartUnixListener() {}
