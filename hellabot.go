@@ -186,6 +186,16 @@ func (bot *Bot) SASLAuthenticate(user, pass string) {
 	bot.sendUserCommand(bot.Nick, bot.Nick, "8")
 }
 
+// WaitFor will block until a message matching the given filter is received
+func (bot *Bot) WaitFor(filter func(*Message) bool) {
+	for mes := range bot.Incoming {
+		if filter(mes) {
+			return
+		}
+	}
+	return
+}
+
 // StandardRegistration performsa a basic set of registration commands
 func (bot *Bot) StandardRegistration() {
 	//Server registration
