@@ -39,7 +39,6 @@ type Bot struct {
 		user *string
 		pass *string
 	}
-	saslHandler       Trigger
 	didAddSASLHandler sync.Once
 	// Log15 loggger
 	log.Logger
@@ -167,7 +166,7 @@ func (bot *Bot) handleOutgoingMessages() {
 // ref: https://github.com/atheme/charybdis/blob/master/doc/sasl.txt
 func (bot *Bot) SASLAuthenticate(user, pass string) {
 	bot.didAddSASLHandler.Do(func() {
-		bot.saslHandler = Trigger{
+		saslHandler := Trigger{
 			Condition: func(bot *Bot, m *Message) bool {
 				return (strings.TrimSpace(m.Content) == "sasl" && len(m.Params) > 1 && m.Params[1] == "ACK") ||
 					(m.Command == "AUTHENTICATE" && len(m.Params) == 1 && m.Params[0] == "+")
@@ -189,7 +188,7 @@ func (bot *Bot) SASLAuthenticate(user, pass string) {
 				return false
 			},
 		}
-		bot.AddTrigger(bot.saslHandler)
+		bot.AddTrigger(saslHandler)
 	})
 	bot.saslCreds.user = &user
 	bot.saslCreds.pass = &pass
