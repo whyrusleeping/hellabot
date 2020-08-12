@@ -23,7 +23,7 @@ func (h *saslAuth) SetAuth(user, pass string) {
 
 func (h *saslAuth) IsAuthMessage(m *Message) bool {
 	return (strings.TrimSpace(m.Content) == "sasl" && m.Param(1) == "ACK") ||
-		(m.Command == "AUTHENTICATE" && len(m.Params) == 1 && m.Params[0] == "+")
+		(m.Command == "AUTHENTICATE" && m.Param(0) == "+")
 }
 
 func (h *saslAuth) Handle(bot *Bot, m *Message) bool {
