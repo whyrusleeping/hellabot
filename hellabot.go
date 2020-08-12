@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	log "gopkg.in/inconshreveable/log15.v2"
 	logext "gopkg.in/inconshreveable/log15.v2/ext"
@@ -37,6 +38,7 @@ type Bot struct {
 	// Log15 loggger
 	log.Logger
 	didJoinChannels sync.Once
+	didGetPrefix    sync.Once
 
 	// Exported fields
 	Host          string
@@ -45,6 +47,8 @@ type Bot struct {
 	SSL           bool
 	SASL          bool
 	HijackSession bool
+	// Bot's prefix
+	Prefix *irc.Prefix
 	// An optional function that connects to an IRC server over plaintext:
 	Dial func(network, addr string) (net.Conn, error)
 	// An optional function that connects to an IRC server over a secured connection:
@@ -82,6 +86,13 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		SASL:          false,
 		Channels:      []string{"#test"},
 		Password:      "",
+		// Somewhat sane default if for some reason we can't retrieve the bot's prefix
+		// for example, if the server doesn't advertise joins
+		Prefix: &irc.Prefix{
+			Name: nick,
+			User: nick,
+			Host: strings.Repeat("*", 510-400-len(nick)*2),
+		},
 	}
 	for _, option := range options {
 		option(&bot)
@@ -92,6 +103,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	bot.Logger.SetHandler(log.DiscardHandler())
 	bot.AddTrigger(pingPong)
 	bot.AddTrigger(joinChannels)
+	bot.AddTrigger(getPrefix)
 	return &bot, nil
 }
 
@@ -218,6 +230,7 @@ func (bot *Bot) sendUserCommand(user, realname, mode string) {
 // SetNick sets the bots nick on the irc server
 func (bot *Bot) SetNick(nick string) {
 	bot.Nick = nick
+	bot.Prefix.Name = nick
 	bot.Send(fmt.Sprintf("NICK %s", nick))
 }
 
@@ -279,28 +292,48 @@ func (bot *Bot) Reply(m *Message, text string) {
 
 // Msg sends a message to 'who' (user or channel)
 func (bot *Bot) Msg(who, text string) {
-	for _, line := range splitText(text) {
-		bot.Send("PRIVMSG " + who + " :" + line)
+	const command = "PRIVMSG"
+	for _, line := range splitText(text, command, who, bot.Prefix) {
+		bot.Send(command + " " + who + " :" + line)
 	}
 }
 
 // Notice sends a NOTICE message to 'who' (user or channel)
 func (bot *Bot) Notice(who, text string) {
-	for _, line := range splitText(text) {
-		bot.Send("NOTICE " + who + " :" + line)
+	const command = "NOTICE"
+	for _, line := range splitText(text, command, who, bot.Prefix) {
+		bot.Send(command + " " + who + " :" + line)
 	}
 }
 
 // Splits a given string into a string slice, in chunks ending
-// either with \n, or with \r\n, or of a size of 400 characters.
-func splitText(text string) []string {
+// either with \n, or with \r\n, or splitting text to maximally allowed size.
+func splitText(text, command, who string, prefix *irc.Prefix) []string {
 	var ret []string
+
+	// Maximum message size that fits into 512 bytes.
+	// Carriage return and linefeed are not counted here as they
+	// are added by handleOutgoingMessages()
+	maxSize := 510 - len(fmt.Sprintf(":%s %s %s :", prefix, command, who))
+
 	scanner := bufio.NewScanner(strings.NewReader(text))
 	for scanner.Scan() {
 		line := scanner.Text()
-		for len(line) > 400 {
-			ret = append(ret, line[:400])
-			line = line[400:]
+		for len(line) > maxSize {
+			totalSize := 0
+			runeSize := 0
+			// utf-8 aware splitting
+			for _, v := range line {
+				runeSize = utf8.RuneLen(v)
+				if totalSize+runeSize > maxSize {
+					ret = append(ret, line[:totalSize])
+					line = line[totalSize:]
+					totalSize = runeSize
+					continue
+				}
+				totalSize += runeSize
+			}
+
 		}
 		ret = append(ret, line)
 	}
@@ -407,6 +440,20 @@ var joinChannels = Trigger{
 			}
 		})
 		return true
+	},
+}
+
+// Get the bot's prefix by catching its own join
+var getPrefix = Trigger{
+	Condition: func(bot *Bot, m *Message) bool {
+		return (m.Command == "JOIN" && m.Name == bot.Nick)
+	},
+	Action: func(bot *Bot, m *Message) bool {
+		bot.didGetPrefix.Do(func() {
+			bot.Prefix = m.Prefix
+			bot.Debug("Got prefix", "prefix", bot.Prefix.String())
+		})
+		return false
 	},
 }
 

@@ -2,9 +2,12 @@ package hbot
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
 
 	"github.com/ftrvxmtrx/fd"
+	"gopkg.in/sorcix/irc.v1"
 )
 
 // StartUnixListener starts up a unix domain socket listener for reconnects to
@@ -39,6 +42,12 @@ func (bot *Bot) StartUnixListener() {
 		panic(err)
 	}
 
+	// Send our prefix
+	_, err = io.WriteString(con, bot.Prefix.String())
+	if err != nil {
+		panic(err)
+	}
+
 	select {
 	case <-bot.Incoming:
 	default:
@@ -66,6 +75,14 @@ func (bot *Bot) hijackSession() bool {
 	if err != nil {
 		panic(err)
 	}
+
+	// Read the reminder which should be our prefix
+	prefix, err := ioutil.ReadAll(con)
+	if err != nil {
+		panic(err)
+	}
+	bot.Prefix = irc.ParsePrefix(string(prefix))
+
 	bot.reconnecting = true
 	bot.con = netcon
 	return true
