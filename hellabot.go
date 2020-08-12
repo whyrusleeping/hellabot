@@ -2,6 +2,7 @@ package hbot
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"strings"
@@ -11,10 +12,6 @@ import (
 	log "gopkg.in/inconshreveable/log15.v2"
 	logext "gopkg.in/inconshreveable/log15.v2/ext"
 	"gopkg.in/sorcix/irc.v1"
-
-	"bytes"
-	"crypto/tls"
-	"encoding/base64"
 )
 
 // Bot implements an irc bot to be connected to a given server
@@ -37,6 +34,10 @@ type Bot struct {
 	// Log15 loggger
 	log.Logger
 	didJoinChannels sync.Once
+
+	// sasl handler
+	sasl    *saslAuth
+	addSASL sync.Once
 
 	// Exported fields
 	Host          string
@@ -73,6 +74,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		started:       time.Now(),
 		unixastr:      fmt.Sprintf("@%s-%s/bot", host, nick),
 		unixsock:      fmt.Sprintf("/tmp/%s-%s-bot.sock", host, nick),
+		sasl:          &saslAuth{},
 		Host:          host,
 		Nick:          nick,
 		ThrottleDelay: 200 * time.Millisecond,
@@ -154,39 +156,6 @@ func (bot *Bot) handleOutgoingMessages() {
 		}
 		time.Sleep(bot.ThrottleDelay)
 	}
-}
-
-// SASLAuthenticate performs SASL authentication
-// ref: https://github.com/atheme/charybdis/blob/master/doc/sasl.txt
-func (bot *Bot) SASLAuthenticate(user, pass string) {
-	var saslHandler = Trigger{
-		Condition: func(bot *Bot, m *Message) bool {
-			return (strings.TrimSpace(m.Content) == "sasl" && len(m.Params) > 1 && m.Params[1] == "ACK") ||
-				(m.Command == "AUTHENTICATE" && len(m.Params) == 1 && m.Params[0] == "+")
-		},
-		Action: func(bot *Bot, m *Message) bool {
-			if strings.TrimSpace(m.Content) == "sasl" && len(m.Params) > 1 && m.Params[1] == "ACK" {
-				bot.Debug("Recieved SASL ACK")
-				bot.Send("AUTHENTICATE PLAIN")
-			}
-
-			if m.Command == "AUTHENTICATE" && len(m.Params) == 1 && m.Params[0] == "+" {
-				bot.Debug("Got auth message!")
-				out := bytes.Join([][]byte{[]byte(user), []byte(user), []byte(pass)}, []byte{0})
-				encpass := base64.StdEncoding.EncodeToString(out)
-				bot.Send("AUTHENTICATE " + encpass)
-				bot.Send("AUTHENTICATE +")
-				bot.Send("CAP END")
-			}
-			return false
-		},
-	}
-
-	bot.AddTrigger(saslHandler)
-	bot.Debug("Beginning SASL Authentication")
-	bot.Send("CAP REQ :sasl")
-	bot.SetNick(bot.Nick)
-	bot.sendUserCommand(bot.Nick, bot.Nick, "8")
 }
 
 // WaitFor will block until a message matching the given filter is received
@@ -439,6 +408,14 @@ type Message struct {
 	// Nick of the messages sender (equivalent to Prefix.Name)
 	// Outdated, please use .Name
 	From string
+}
+
+// Param returns the i'th parameter or the empty string if the requested element doesn't exist.
+func (m *Message) Param(i int) string {
+	if i < 0 || i >= len(m.Params) {
+		return ""
+	}
+	return m.Params[i]
 }
 
 // ParseMessage takes a string and attempts to create a Message struct.
