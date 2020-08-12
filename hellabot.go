@@ -34,6 +34,13 @@ type Bot struct {
 	// Unix domain socket address for other Unixes
 	unixsock string
 	unixlist net.Listener
+	// SASL handler
+	saslCreds struct {
+		user *string
+		pass *string
+	}
+	saslHandler       Trigger
+	didAddSASLHandler sync.Once
 	// Log15 loggger
 	log.Logger
 	didJoinChannels sync.Once
@@ -159,30 +166,33 @@ func (bot *Bot) handleOutgoingMessages() {
 // SASLAuthenticate performs SASL authentication
 // ref: https://github.com/atheme/charybdis/blob/master/doc/sasl.txt
 func (bot *Bot) SASLAuthenticate(user, pass string) {
-	var saslHandler = Trigger{
-		Condition: func(bot *Bot, m *Message) bool {
-			return (strings.TrimSpace(m.Content) == "sasl" && len(m.Params) > 1 && m.Params[1] == "ACK") ||
-				(m.Command == "AUTHENTICATE" && len(m.Params) == 1 && m.Params[0] == "+")
-		},
-		Action: func(bot *Bot, m *Message) bool {
-			if strings.TrimSpace(m.Content) == "sasl" && len(m.Params) > 1 && m.Params[1] == "ACK" {
-				bot.Debug("Recieved SASL ACK")
-				bot.Send("AUTHENTICATE PLAIN")
-			}
+	bot.didAddSASLHandler.Do(func() {
+		bot.saslHandler = Trigger{
+			Condition: func(bot *Bot, m *Message) bool {
+				return (strings.TrimSpace(m.Content) == "sasl" && len(m.Params) > 1 && m.Params[1] == "ACK") ||
+					(m.Command == "AUTHENTICATE" && len(m.Params) == 1 && m.Params[0] == "+")
+			},
+			Action: func(bot *Bot, m *Message) bool {
+				if strings.TrimSpace(m.Content) == "sasl" && len(m.Params) > 1 && m.Params[1] == "ACK" {
+					bot.Debug("Recieved SASL ACK")
+					bot.Send("AUTHENTICATE PLAIN")
+				}
 
-			if m.Command == "AUTHENTICATE" && len(m.Params) == 1 && m.Params[0] == "+" {
-				bot.Debug("Got auth message!")
-				out := bytes.Join([][]byte{[]byte(user), []byte(user), []byte(pass)}, []byte{0})
-				encpass := base64.StdEncoding.EncodeToString(out)
-				bot.Send("AUTHENTICATE " + encpass)
-				bot.Send("AUTHENTICATE +")
-				bot.Send("CAP END")
-			}
-			return false
-		},
-	}
-
-	bot.AddTrigger(saslHandler)
+				if m.Command == "AUTHENTICATE" && len(m.Params) == 1 && m.Params[0] == "+" {
+					bot.Debug("Got auth message!")
+					out := bytes.Join([][]byte{[]byte(*bot.saslCreds.user), []byte(*bot.saslCreds.user), []byte(*bot.saslCreds.pass)}, []byte{0})
+					encpass := base64.StdEncoding.EncodeToString(out)
+					bot.Send("AUTHENTICATE " + encpass)
+					bot.Send("AUTHENTICATE +")
+					bot.Send("CAP END")
+				}
+				return false
+			},
+		}
+		bot.AddTrigger(bot.saslHandler)
+	})
+	bot.saslCreds.user = &user
+	bot.saslCreds.pass = &pass
 	bot.Debug("Beginning SASL Authentication")
 	bot.Send("CAP REQ :sasl")
 	bot.SetNick(bot.Nick)
