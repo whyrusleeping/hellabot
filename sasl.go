@@ -60,5 +60,5 @@ func (bot *Bot) SASLAuthenticate(user, pass string) {
 	bot.Debug("Beginning SASL Authentication")
 	bot.Send("CAP REQ :sasl")
 	bot.SetNick(bot.Nick)
-	bot.sendUserCommand(bot.Nick, bot.Nick, "8")
+	bot.sendUserCommand(bot.Nick, bot.Nick)
 }
