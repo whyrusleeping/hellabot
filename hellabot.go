@@ -175,13 +175,13 @@ func (bot *Bot) StandardRegistration() {
 		bot.Send("PASS " + bot.Password)
 	}
 	bot.Debug("Sending standard registration")
-	bot.sendUserCommand(bot.Nick, bot.Nick, "8")
+	bot.sendUserCommand(bot.Nick, bot.Nick)
 	bot.SetNick(bot.Nick)
 }
 
 // Set username, real name, and mode
-func (bot *Bot) sendUserCommand(user, realname, mode string) {
-	bot.Send(fmt.Sprintf("USER %s %s * :%s", user, mode, realname))
+func (bot *Bot) sendUserCommand(user, realname string) {
+	bot.Send(fmt.Sprintf("USER %s 0 * :%s", user, realname))
 }
 
 // SetNick sets the bots nick on the irc server
