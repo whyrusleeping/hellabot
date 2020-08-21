@@ -10,7 +10,7 @@ import (
 	log "gopkg.in/inconshreveable/log15.v2"
 )
 
-var serv = flag.String("server", "irc.coldfront.net:6667", "hostname and port for irc server to connect to")
+var serv = flag.String("server", "irc.theairlock.net:6667", "hostname and port for irc server to connect to")
 var nick = flag.String("nick", "hellabot", "nickname for the bot")
 
 func main() {
