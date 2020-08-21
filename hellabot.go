@@ -11,7 +11,7 @@ import (
 
 	log "gopkg.in/inconshreveable/log15.v2"
 	logext "gopkg.in/inconshreveable/log15.v2/ext"
-	"gopkg.in/sorcix/irc.v1"
+	"gopkg.in/sorcix/irc.v2"
 )
 
 // Bot implements an irc bot to be connected to a given server
@@ -132,7 +132,7 @@ func (bot *Bot) handleIncomingMessages() {
 		// Disconnect if we have seen absolutely nothing for 300 seconds
 		bot.con.SetDeadline(time.Now().Add(bot.PingTimeout))
 		msg := ParseMessage(scan.Text())
-		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing)
+		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing())
 		go func() {
 			for _, h := range bot.handlers {
 				if h.Handle(bot, msg) {
@@ -424,12 +424,12 @@ func (m *Message) Param(i int) string {
 func ParseMessage(raw string) (m *Message) {
 	m = new(Message)
 	m.Message = irc.ParseMessage(raw)
-	m.Content = m.Trailing
+	m.Content = m.Trailing()
 
 	if len(m.Params) > 0 {
 		m.To = m.Params[0]
 	} else if m.Command == "JOIN" {
-		m.To = m.Trailing
+		m.To = m.Trailing()
 	}
 	if m.Prefix != nil {
 		m.From = m.Prefix.Name
