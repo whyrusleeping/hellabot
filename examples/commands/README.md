@@ -23,3 +23,5 @@ type Func func(m *hbot.Message, args []string)
 ```
 
 It's very basic, but it works pretty well. It could easily be expanded to do more validation (for example require N arguments) that we could check in the "Process"-method, but I just do that in the individual commands and it has worked just fine.
+
+Run this example with go run main.go -config dev.toml
