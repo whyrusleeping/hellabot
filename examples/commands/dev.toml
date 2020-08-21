@@ -1,0 +1,4 @@
+server = "irc.theairlock.net:7778"
+nick = "hellabot"
+ssl = true
+channels = ["#test", "#test2:somepassword"]
