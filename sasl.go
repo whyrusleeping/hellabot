@@ -45,7 +45,6 @@ func (h *saslAuth) Handle(bot *Bot, m *Message) bool {
 		out := bytes.Join([][]byte{[]byte(h.user), []byte(h.user), []byte(h.pass)}, []byte{0})
 		encpass := base64.StdEncoding.EncodeToString(out)
 		bot.Send("AUTHENTICATE " + encpass)
-		bot.Send("AUTHENTICATE +")
 		bot.Send("CAP END")
 	}
 
