@@ -23,7 +23,8 @@ func (h *saslAuth) SetAuth(user, pass string) {
 
 func (h *saslAuth) IsAuthMessage(m *Message) bool {
 	return (strings.TrimSpace(m.Content) == "sasl" && m.Param(1) == "ACK") ||
-		(m.Command == "AUTHENTICATE" && m.Param(0) == "+")
+		(m.Command == "AUTHENTICATE" && m.Param(0) == "+") ||
+		(m.Command == "903" || m.Command == "904")
 }
 
 func (h *saslAuth) Handle(bot *Bot, m *Message) bool {
@@ -45,8 +46,12 @@ func (h *saslAuth) Handle(bot *Bot, m *Message) bool {
 		out := bytes.Join([][]byte{[]byte(h.user), []byte(h.user), []byte(h.pass)}, []byte{0})
 		encpass := base64.StdEncoding.EncodeToString(out)
 		bot.Send("AUTHENTICATE " + encpass)
-		bot.Send("AUTHENTICATE +")
-		bot.Send("CAP END")
+	}
+
+	// 903 RPL_SASLSUCCESS
+	// 904 ERR_SASLFAIL
+	if m.Command == "903" || m.Command == "904" {
+		bot.send("CAP END")
 	}
 
 	return false
