@@ -51,7 +51,7 @@ func (h *saslAuth) Handle(bot *Bot, m *Message) bool {
 	// 903 RPL_SASLSUCCESS
 	// 904 ERR_SASLFAIL
 	if m.Command == "903" || m.Command == "904" {
-		bot.send("CAP END")
+		bot.Send("CAP END")
 	}
 
 	return false
