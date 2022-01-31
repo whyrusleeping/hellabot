@@ -11,7 +11,7 @@ two functions, one for the condition, and one for the action.
 
 ```go
 var MyTrigger = hbot.Trigger{
-	func (b *hbot.Bot, m *Message) bool {
+	func (b *hbot.Bot, m *hbot.Message) bool {
 		return m.From == "whyrusleeping"
 	},
 	func (b *hbot.Bot, m *hbot.Message) bool {
