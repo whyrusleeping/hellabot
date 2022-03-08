@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	log "gopkg.in/inconshreveable/log15.v2"
-	logext "gopkg.in/inconshreveable/log15.v2/ext"
 	"gopkg.in/sorcix/irc.v2"
 )
 
@@ -29,10 +27,8 @@ type Bot struct {
 	// Unix domain abstract socket address for reconnects (linux only)
 	unixastr string
 	// Unix domain socket address for other Unixes
-	unixsock string
-	unixlist net.Listener
-	// Log15 loggger
-	log.Logger
+	unixsock        string
+	unixlist        net.Listener
 	didJoinChannels sync.Once
 
 	// sasl handler
@@ -88,10 +84,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 	for _, option := range options {
 		option(&bot)
 	}
-	// Discard logs by default
-	bot.Logger = log.New("id", logext.RandId(8), "host", bot.Host, "nick", log.Lazy{bot.getNick})
 
-	bot.Logger.SetHandler(log.DiscardHandler())
 	bot.AddTrigger(pingPong)
 	bot.AddTrigger(joinChannels)
 	return &bot, nil
@@ -107,7 +100,6 @@ func (bot *Bot) getNick() string {
 }
 
 func (bot *Bot) connect(host string) (err error) {
-	bot.Debug("Connecting")
 	dial := bot.Dial
 	if dial == nil {
 		dial = net.Dial
@@ -132,7 +124,6 @@ func (bot *Bot) handleIncomingMessages() {
 		// Disconnect if we have seen absolutely nothing for 300 seconds
 		bot.con.SetDeadline(time.Now().Add(bot.PingTimeout))
 		msg := ParseMessage(scan.Text())
-		bot.Debug("Incoming", "raw", scan.Text(), "msg.To", msg.To, "msg.From", msg.From, "msg.Params", msg.Params, "msg.Trailing", msg.Trailing())
 		go func() {
 			for _, h := range bot.handlers {
 				if h.Handle(bot, msg) {
@@ -148,10 +139,8 @@ func (bot *Bot) handleIncomingMessages() {
 // Handles message speed throtling
 func (bot *Bot) handleOutgoingMessages() {
 	for s := range bot.outgoing {
-		bot.Debug("Outgoing", "data", s)
 		_, err := fmt.Fprint(bot.con, s+"\r\n")
 		if err != nil {
-			bot.Error("handleOutgoingMessages fmt.Fprint error", "err", err)
 			return
 		}
 		time.Sleep(bot.ThrottleDelay)
@@ -165,7 +154,6 @@ func (bot *Bot) WaitFor(filter func(*Message) bool) {
 			return
 		}
 	}
-	return
 }
 
 // StandardRegistration performsa a basic set of registration commands
@@ -174,7 +162,6 @@ func (bot *Bot) StandardRegistration() {
 	if bot.Password != "" {
 		bot.Send("PASS " + bot.Password)
 	}
-	bot.Debug("Sending standard registration")
 	bot.sendUserCommand(bot.Nick, bot.Nick)
 	bot.SetNick(bot.Nick)
 }
@@ -192,26 +179,20 @@ func (bot *Bot) SetNick(nick string) {
 
 // Run starts the bot and connects to the server. Blocks until we disconnect from the server.
 func (bot *Bot) Run() {
-	bot.Debug("Starting bot goroutines")
-
 	// Attempt reconnection
 	var hijack bool
 	if bot.HijackSession {
 		if bot.SSL {
-			bot.Crit("Can't Hijack a SSL connection")
 			return
 		}
 		hijack = bot.hijackSession()
-		bot.Debug("Hijack", "Did we?", hijack)
 	}
 
 	if !hijack {
 		err := bot.connect(bot.Host)
 		if err != nil {
-			bot.Crit("bot.Connect error", "err", err.Error())
 			return
 		}
-		bot.Info("Connected successfully!")
 	}
 
 	go bot.handleIncomingMessages()
@@ -229,7 +210,6 @@ func (bot *Bot) Run() {
 	}
 	for m := range bot.Incoming {
 		if m == nil {
-			log.Info("Disconnected")
 			return
 		}
 	}
