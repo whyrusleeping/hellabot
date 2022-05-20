@@ -54,6 +54,8 @@ type Bot struct {
 	DialTLS func(network, addr string, tlsConf *tls.Config) (*tls.Conn, error)
 	// This bots nick
 	Nick string
+	// This bots realname
+	Realname string
 	// Duration to wait between sending of messages to avoid being
 	// kicked by the server for flooding (default 200ms)
 	ThrottleDelay time.Duration
@@ -79,6 +81,7 @@ func NewBot(host, nick string, options ...func(*Bot)) (*Bot, error) {
 		sasl:          &saslAuth{},
 		Host:          host,
 		Nick:          nick,
+		Realname:      nick,
 		ThrottleDelay: 200 * time.Millisecond,
 		PingTimeout:   300 * time.Second,
 		HijackSession: false,
@@ -179,7 +182,7 @@ func (bot *Bot) StandardRegistration() {
 		bot.Send("PASS " + bot.Password)
 	}
 	bot.Debug("Sending standard registration")
-	bot.sendUserCommand(bot.Nick, bot.Nick)
+	bot.sendUserCommand(bot.Nick, bot.Realname)
 	bot.SetNick(bot.Nick)
 }
 
