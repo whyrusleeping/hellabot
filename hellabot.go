@@ -12,6 +12,8 @@ import (
 	"gopkg.in/sorcix/irc.v2"
 )
 
+var mu = &sync.Mutex{}
+
 // Bot implements an irc bot to be connected to a given server
 type Bot struct {
 
@@ -96,6 +98,8 @@ func (bot *Bot) Uptime() string {
 }
 
 func (bot *Bot) getNick() string {
+	mu.Lock()
+	defer mu.Unlock()
 	return bot.Nick
 }
 
@@ -173,6 +177,8 @@ func (bot *Bot) sendUserCommand(user, realname string) {
 
 // SetNick sets the bots nick on the irc server
 func (bot *Bot) SetNick(nick string) {
+	mu.Lock()
+	defer mu.Unlock()
 	bot.Nick = nick
 	bot.Send(fmt.Sprintf("NICK %s", nick))
 }
