@@ -37,10 +37,12 @@ func (h *saslAuth) Handle(bot *Bot, m *Message) bool {
 	}
 
 	if strings.TrimSpace(m.Content) == "sasl" && m.Param(1) == "ACK" {
+		bot.Debug("Recieved SASL ACK")
 		bot.Send("AUTHENTICATE PLAIN")
 	}
 
 	if m.Command == "AUTHENTICATE" && m.Param(0) == "+" {
+		bot.Debug("Got auth message!")
 		out := bytes.Join([][]byte{[]byte(h.user), []byte(h.user), []byte(h.pass)}, []byte{0})
 		encpass := base64.StdEncoding.EncodeToString(out)
 		bot.Send("AUTHENTICATE " + encpass)
@@ -60,6 +62,7 @@ func (h *saslAuth) Handle(bot *Bot, m *Message) bool {
 func (bot *Bot) SASLAuthenticate(user, pass string) {
 	bot.sasl.SetAuth(user, pass)
 	bot.addSASL.Do(func() { bot.AddTrigger(bot.sasl) })
+	bot.Debug("Beginning SASL Authentication")
 	bot.Send("CAP REQ :sasl")
 	bot.SetNick(bot.Nick)
 	bot.sendUserCommand(bot.Nick, bot.Nick)

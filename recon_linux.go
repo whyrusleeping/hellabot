@@ -51,6 +51,7 @@ func (bot *Bot) StartUnixListener() {
 func (bot *Bot) hijackSession() bool {
 	con, err := net.Dial("unix", bot.unixastr)
 	if err != nil {
+		bot.Info("Couldnt restablish connection, no prior bot.", "err", err)
 		return false
 	}
 	defer con.Close()
