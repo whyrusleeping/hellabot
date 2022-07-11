@@ -145,6 +145,11 @@ func (bot *Bot) handleIncomingMessages() {
 		}()
 		bot.Incoming <- msg
 	}
+
+	if err := scan.Err(); err != nil {
+		bot.Crit("bot.handleIncomingMessages error", "err", err.Error())
+	}
+
 	close(bot.Incoming)
 }
 
