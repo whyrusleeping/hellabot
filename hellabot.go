@@ -367,7 +367,7 @@ var pingPong = Trigger{
 
 var joinChannels = Trigger{
 	Condition: func(bot *Bot, m *Message) bool {
-		return m.Command == irc.RPL_WELCOME || m.Command == irc.RPL_ENDOFMOTD // 001 or 372
+		return m.Command == irc.RPL_WELCOME || m.Command == irc.RPL_ENDOFMOTD // 001 or 376
 	},
 	Action: func(bot *Bot, m *Message) bool {
 		bot.didJoinChannels.Do(func() {
@@ -383,7 +383,7 @@ var joinChannels = Trigger{
 				}
 			}
 		})
-		return true
+		return false
 	},
 }
 
